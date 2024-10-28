@@ -3,9 +3,8 @@ Constraints to keep the filters on a certain set (e.g. sphere), or to fix
 some filter values during training.
 """
 
+import torch
 import torch.nn as nn
-
-import amatorch.normalization as normalization
 
 __all__ = ["Sphere", "Identity", "FixedFilters"]
 
@@ -16,10 +15,7 @@ def __dir__():
 
 # Define the sphere constraint
 class Sphere(nn.Module):
-    """
-    Constrains the input tensor to lie on the sphere.
-    """
-
+    """Constrains the input tensor to lie on the sphere."""
 
     def forward(self, X):
         """
@@ -41,7 +37,6 @@ class Sphere(nn.Module):
         X_normalized = X / X.norm(dim=-1, keepdim=True)
         return X_normalized
 
-
     def right_inverse(self, S):
         """
         Identity function to assign to parametrization.
@@ -61,10 +56,7 @@ class Sphere(nn.Module):
 
 # Define the unconstrained constraint
 class Identity(nn.Module):
-    """
-    Leaves the input tensor unconstrained. Used for consistency.
-    """
-
+    """Leaves the input tensor unconstrained. Used for consistency."""
 
     def forward(self, X):
         """
@@ -82,7 +74,6 @@ class Identity(nn.Module):
             (n_filters, n_dim).
         """
         return X
-
 
     def right_inverse(self, S):
         """
@@ -102,9 +93,7 @@ class Identity(nn.Module):
 
 
 class FixedFilters(nn.Module):
-    """
-    Fix some of the filters to a certain value.
-    """
+    """Fix some of the filters to prevent updating with gradient descent."""
 
     def __init__(self, input_tensor, n_row_fixed):
         """
@@ -117,7 +106,6 @@ class FixedFilters(nn.Module):
         """
         # Register the fixed part of the tensor
         self.register_buffer("fixed_tensor", input_tensor[:n_row_fixed])
-
 
     def forward(self, X):
         """
@@ -134,7 +122,6 @@ class FixedFilters(nn.Module):
             Fixed value.
         """
         return torch.cat([self.fixed_tensor, X], dim=0)
-
 
     def right_inverse(self, X):
         """

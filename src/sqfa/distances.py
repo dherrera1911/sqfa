@@ -1,19 +1,32 @@
-"""
-Distances between Symmetric Positive Definite matrices.
-"""
+"""Distances between Symmetric Positive Definite matrices."""
 
 import torch
 
-from .linalg_utils import conjugate_to_identity, spd_sqrt, spd_log, generalized_eigenvalues
+from .linalg_utils import (
+    generalized_eigenvalues,
+)
+
+__all__ = ["affine_invariant_sq"]
 
 
-__all__ = ["affine_invariant_distance_sq"]
+def affine_invariant_sq(A, B):
+    """
+    Compute the squared affine invariant distance between SPD matrices.
 
+    Parameters
+    ----------
+    A : torch.Tensor
+        Shape (n_batch_A, n_dim, n_dim), the first SPD matrix.
+    B : torch.Tensor
+        Shape (n_batch_B, n_dim, n_dim), the second SPD matrix.
 
-def affine_invariant_distance_sq(A, B):
+    Returns
+    -------
+    distance_squared : torch.Tensor
+        Shape (n_batch_A, n_batch_B), the squared affine invariant distance.
+    """
     # Compute the generalized eigenvalues
     gen_eigvals = generalized_eigenvalues(A, B)
     # Compute the distance
-    distance_squared = gs.sum(gs.log(gen_eigvals) ** 2, axis=-1)
+    distance_squared = torch.sum(torch.log(gen_eigvals) ** 2, axis=-1)
     return distance_squared
-
