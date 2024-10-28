@@ -148,7 +148,7 @@ select = [
     "I",
     "D",
 ]
-ignore = ["SIM105"]
+ignore = ["SIM105", "D205"]
 
 
 [tool.ruff.lint.pydocstyle]
