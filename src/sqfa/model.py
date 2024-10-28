@@ -40,6 +40,7 @@ class SQFA(nn.Module):
             Constraint to apply to the filters. Can be 'none', 'sphere' or
             'orthogonal'. Default is 'sphere'.
         """
+        super().__init__()
         n_dim = input_covariances.shape[-1]
 
         if filters is None:
