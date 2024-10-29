@@ -9,6 +9,10 @@ from .linalg_utils import (
 __all__ = ["affine_invariant_sq"]
 
 
+def __dir__():
+    return __all__
+
+
 def affine_invariant_sq(A, B):
     """
     Compute the squared affine invariant distance between SPD matrices.

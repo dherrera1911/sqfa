@@ -6,6 +6,14 @@ from torch.nn.utils.parametrizations import orthogonal
 from torch.nn.utils.parametrize import register_parametrization
 
 from .constrains import Identity, Sphere
+from .linalg_utils import conjugate_matrix
+
+
+__all__ = ["SQFA"]
+
+
+def __dir__():
+    return __all__
 
 
 class SQFA(nn.Module):
@@ -67,8 +75,8 @@ class SQFA(nn.Module):
         torch.Tensor shape (n_classes, n_filters, n_filters)
             Covariances of the transformed features.
         """
-        transformed_covariances = torch.einsum(
-            "ij,cjk,km->cim", self.filters, self.input_covariances, self.filters.T
+        transformed_covariances = conjugate_matrix(
+          self.input_covariances, self.filters
         )
         return transformed_covariances + self.diagonal_noise[None, :, :]
 

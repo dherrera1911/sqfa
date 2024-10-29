@@ -5,6 +5,10 @@ import torch
 __all__ = ["conjugate_matrix", "generalized_eigenvalues", "spd_sqrt", "spd_log"]
 
 
+def __dir__():
+    return __all__
+
+
 def conjugate_matrix(A, B):
     """
     Conjugate matrix A by B, i.e. compute B A B^T.
