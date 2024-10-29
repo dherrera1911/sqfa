@@ -45,10 +45,12 @@ class SQFA(nn.Module):
 
         if filters is None:
             filters = torch.randn(n_filters, n_dim)
+        else:
+            filters = torch.as_tensor(filters, dtype=torch.float32)
 
         self.filters = nn.Parameter(filters)
-        self.register_buffer("input_covariances", input_covariances)
-        self.register_buffer("diagonal_noise", feature_noise * torch.eye(n_dim))
+        self.register_buffer("input_covariances", torch.as_tensor(input_covariances, dtype=torch.float32))
+        self.register_buffer("diagonal_noise", feature_noise * torch.eye(filters.shape[0]))
         if constraint == "none":
             register_parametrization(self, "filters", Identity())
         elif constraint == "sphere":
