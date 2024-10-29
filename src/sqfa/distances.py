@@ -6,14 +6,14 @@ from .linalg_utils import (
     generalized_eigenvalues,
 )
 
-__all__ = ["affine_invariant_sq"]
+__all__ = ["ai_distance_sq"]
 
 
 def __dir__():
     return __all__
 
 
-def affine_invariant_sq(A, B):
+def ai_distance_sq(A, B):
     """
     Compute the squared affine invariant distance between SPD matrices.
 
