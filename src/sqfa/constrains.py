@@ -95,7 +95,7 @@ class Identity(nn.Module):
 class FixedFilters(nn.Module):
     """Fix some of the filters to prevent updating with gradient descent."""
 
-    def __init__(self, input_tensor, n_row_fixed):
+    def __init__(self, n_row_fixed):
         """
         Initialize the FixedFilters class.
 
@@ -104,8 +104,8 @@ class FixedFilters(nn.Module):
         value : torch.Tensor
             Value to fix the filters to.
         """
-        # Register the fixed part of the tensor
-        self.register_buffer("fixed_tensor", input_tensor[:n_row_fixed])
+        super().__init__()
+        self.n_row_fixed = n_row_fixed
 
     def forward(self, X):
         """
@@ -121,7 +121,9 @@ class FixedFilters(nn.Module):
         torch.Tensor
             Fixed value.
         """
-        return torch.cat([self.fixed_tensor, X], dim=0)
+        fixed_tensor = X[:self.n_row_fixed].detach()
+        return torch.cat([fixed_tensor,
+                          X[self.n_row_fixed:]], dim=0)
 
     def right_inverse(self, X):
         """
@@ -137,4 +139,4 @@ class FixedFilters(nn.Module):
         torch.Tensor
             Returns the non-fixed part of the tensor.
         """
-        return X[self.fixed_tensor.shape[0] :]
+        return X
