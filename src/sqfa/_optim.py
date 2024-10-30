@@ -1,14 +1,10 @@
-"""
-Routine to fit SQFA filters using Gradient Descent.
-"""
+"""Routine to fit SQFA filters using Gradient Descent."""
 
 import time
 
 import torch
 from torch import optim
 from tqdm import tqdm
-
-from .distances import ai_distance_sq
 
 __all__ = ["fitting_loop"]
 
@@ -33,10 +29,10 @@ def fitting_loop(
     model : SQFA model object
         The model used for fitting.
     distance_fun : callable
-        Function returning pairwise distances (or squared distances or similarity) between
-        covariance matrices, to use for the loss. The function should take two batches of
-        covariance matrices of shape (batch_size, n_dim, n_dim) and return a tensor of shape
-        (batch_size, batch_size).
+        Function returning pairwise distances (or squared distances or similarity)
+        between covariance matrices, to use for the loss. The function should take
+        two batches of covariance matrices of shape (batch_size, n_dim, n_dim) and
+        return a tensor of shape (batch_size, batch_size).
     epochs : int, optional
         Number of training epochs. By default 30.
     learning_rate : float, optional
@@ -72,7 +68,7 @@ def fitting_loop(
 
         covariances = model.get_feature_covariances()
         distances = distance_fun(covariances, covariances)
-        epoch_loss = -torch.mean(distances)
+        epoch_loss = -torch.mean(distances[tril_ind[0], tril_ind[1]])
 
         epoch_loss.backward()
         optimizer.step()
