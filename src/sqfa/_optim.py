@@ -17,9 +17,10 @@ def fitting_loop(
     model,
     distance_fun,
     epochs=30,
-    learning_rate=0.1,
+    lr=0.1,
     decay_step=1000,
     decay_rate=1,
+    **kwargs,
 ):
     """
     Learn SQFA filters using Gradient Descent.
@@ -35,12 +36,14 @@ def fitting_loop(
         return a tensor of shape (batch_size, batch_size).
     epochs : int, optional
         Number of training epochs. By default 30.
-    learning_rate : float, optional
+    lr : float, optional
         Initial learning rate, by default 0.1.
     decay_step : int, optional
         Number of steps to decay the learning rate, by default 1000.
     decay_rate : float, optional
         Learning rate decay factor, by default 1.
+    kwargs : dict
+        Additional arguments to pass to NAdam optimizer.
 
     Returns
     -------
@@ -50,7 +53,7 @@ def fitting_loop(
         Tensor containing the training time at each epoch (shape: epochs).
     """
     # Create optimizer and scheduler
-    optimizer = optim.NAdam(model.parameters(), lr=learning_rate)
+    optimizer = optim.NAdam(model.parameters(), lr=lr, **kwargs)
     scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer, step_size=decay_step, gamma=decay_rate
     )
