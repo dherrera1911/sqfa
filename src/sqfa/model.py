@@ -8,7 +8,6 @@ from torch.nn.utils.parametrize import register_parametrization
 from .constrains import Identity, Sphere
 from .linalg_utils import conjugate_matrix
 
-
 __all__ = ["SQFA"]
 
 
@@ -57,8 +56,13 @@ class SQFA(nn.Module):
             filters = torch.as_tensor(filters, dtype=torch.float32)
 
         self.filters = nn.Parameter(filters)
-        self.register_buffer("input_covariances", torch.as_tensor(input_covariances, dtype=torch.float32))
-        self.register_buffer("diagonal_noise", feature_noise * torch.eye(filters.shape[0]))
+        self.register_buffer(
+            "input_covariances", torch.as_tensor(input_covariances, dtype=torch.float32)
+        )
+        feature_noise_mat = torch.as_tensor(
+            feature_noise, dtype=torch.float32
+        ) * torch.eye(n_filters)
+        self.register_buffer("diagonal_noise", feature_noise_mat)
         if constraint == "none":
             register_parametrization(self, "filters", Identity())
         elif constraint == "sphere":
@@ -75,9 +79,7 @@ class SQFA(nn.Module):
         torch.Tensor shape (n_classes, n_filters, n_filters)
             Covariances of the transformed features.
         """
-        transformed_covariances = conjugate_matrix(
-          self.input_covariances, self.filters
-        )
+        transformed_covariances = conjugate_matrix(self.input_covariances, self.filters)
         return transformed_covariances + self.diagonal_noise[None, :, :]
 
     def forward(self, data_points):
