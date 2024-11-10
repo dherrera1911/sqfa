@@ -54,7 +54,7 @@ Repository = "https://github.com/dherrera1911/sqfa"
 
 
 [tool.pytest.ini_options]
-addopts = "--cov=amatorch --cov-report term-missing -n auto"
+addopts = "--cov=sqfa --cov-report term-missing -n auto"
 testpaths = ["tests"]
 
 
