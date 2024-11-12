@@ -104,10 +104,8 @@ def log_euclidean(A, B):
 
 def _matrix_subset_distance_generator(subset_inds, distance_fun):
     """
-    Generate a function that computes the distance using only a subset
-    of the matrix elements. The distance computed is the same as the one
-    computed by `distance_fun`, but only for the subset of elements
-    specified by `subset_inds`.
+    Generate a function takes a sub-matrix from input SPD matrices
+    and then computes the distance between them.
 
     Parameters
     ----------
