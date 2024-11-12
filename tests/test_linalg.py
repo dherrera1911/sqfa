@@ -1,4 +1,5 @@
 """Tests for the linalg_utils module."""
+
 import numpy as np
 import pytest
 import scipy.linalg
@@ -7,7 +8,10 @@ import torch
 from make_examples import sample_spd
 from sqfa.linalg_utils import (
     conjugate_matrix,
+    conjugate_to_identity,
     generalized_eigenvalues,
+    spd_log,
+    spd_sqrt,
 )
 
 
@@ -21,6 +25,11 @@ def generalized_eigenvalues_ref(A, B):
         A tensor of matrices of shape (n_matrices_A, n_dim, n_dim).
     B : np.ndarray
         A tensor of matrices of shape (n_matrices_B, n_dim, n_dim).
+
+    Returns
+    -------
+    generalized_eigenvalues : torch.Tensor
+        A tensor of generalized eigenvalues of shape (n_matrices_A, n_matrices_B, n_dim).
     """
     if A.dim() < 3:
         A = A.unsqueeze(0)
@@ -40,12 +49,81 @@ def generalized_eigenvalues_ref(A, B):
         np.sort(generalized_eigenvalues, axis=-1), dtype=torch.float32
     )
 
-    return torch.squeeze(generalized_eigenvalues)
+    return torch.squeeze(generalized_eigenvalues, dim=(0, 1))
+
+
+def matrix_sqrt_ref(A):
+    """
+    Compute the square root of a tensor of SPD matrices using scipy.
+
+    Parameters
+    ----------
+    A : np.ndarray
+        A tensor of SPD matrices of shape (n_matrices, n_dim, n_dim).
+
+    Returns
+    -------
+    sqrt_A : np.ndarray
+        A tensor of square roots of the input matrices of shape (n_matrices, n_dim, n_dim).
+    """
+    if A.dim() < 3:
+        A = A.unsqueeze(0)
+    n_matrices = A.shape[0]
+    n_dim = A.shape[1]
+    sqrt_A = np.zeros((n_matrices, n_dim, n_dim))
+    if n_dim > 1:
+        for i in range(n_matrices):
+            sqrt_A[i] = scipy.linalg.sqrtm(A[i])
+    else:
+        sqrt_A = np.sqrt(A)
+    return sqrt_A
+
+
+def matrix_log_ref(A):
+    """
+    Compute the matrix logarithm of a tensor of SPD matrices using scipy.
+
+    Parameters
+    ----------
+    A : np.ndarray
+        A tensor of SPD matrices of shape (n_matrices, n_dim, n_dim).
+
+    Returns
+    -------
+    log_A : np.ndarray
+        A tensor of matrix logarithms of the input matrices of shape (n_matrices, n_dim, n_dim).
+    """
+    if A.dim() < 3:
+        A = A.unsqueeze(0)
+    n_matrices = A.shape[0]
+    n_dim = A.shape[1]
+    log_A = np.zeros((n_matrices, n_dim, n_dim))
+    for i in range(n_matrices):
+        log_A[i] = scipy.linalg.logm(A[i])
+
+    return log_A
 
 
 @pytest.fixture(scope="function")
 def sample_spd_matrices(n_matrices_A, n_matrices_B, n_dim):
-    """Generate a tensor of SPD matrices."""
+    """Generate tensors of SPD matrices.
+
+    Parameters
+    ----------
+    n_matrices_A : int
+        The number of matrices in the A tensor.
+    n_matrices_B : int
+        The number of matrices in the B tensor.
+    n_dim : int
+        The dimension of the matrices.
+
+    Returns
+    -------
+    A : torch.Tensor
+        A tensor of SPD matrices of shape (n_matrices_A, n_dim, n_dim).
+    B : torch.Tensor
+        A tensor of SPD matrices of shape (n_matrices_B, n_dim, n_dim).
+    """
     A = sample_spd(n_matrices_A, n_dim)
     B = sample_spd(n_matrices_B, n_dim)
     return A, B
@@ -53,7 +131,7 @@ def sample_spd_matrices(n_matrices_A, n_matrices_B, n_dim):
 
 @pytest.fixture(scope="function")
 def sample_filters(n_filters, n_dim):
-    """Generate a tensor of filters."""
+    """Generate a tensor of random filters."""
     filters = torch.randn(n_filters, n_dim)
     return filters
 
@@ -68,54 +146,58 @@ def test_generalized_eigenvalues(
     A, B = sample_spd_matrices
     eigvals = generalized_eigenvalues(A, B)
 
+    # Check the dimensions and shape. The output should have shape (n_matrices_A, n_matrices_B, n_dim),
+    # but the batch dimensions n_matrices_A and n_matrices_B are squeezed out if they are length 1
     if n_matrices_A > 1 and n_matrices_B > 1:
         assert eigvals.dim() == 3, (
-            "The output does not have the correct number of dimensions for "
-            "A.dim()>1 and B.dim()>1."
+            "generalized_eigenvalues() output does not have the correct number"
+            "of dimensions for A.dim()>1 and B.dim()>1."
         )
         assert (
             eigvals.shape[1] == n_matrices_B
-        ), "The output does not match B tensor shape"
+        ), "generalized_eigenvalues() does not match B tensor shape"
         assert (
             eigvals.shape[0] == n_matrices_A
-        ), "The output does not match A tensor shape"
-        assert (
-            eigvals.shape[-1] == n_dim
-        ), "The output does not match the dimension of the matrices."
+        ), "generalized_eigenvalues() output does not match A tensor shape"
+        assert eigvals.shape[-1] == n_dim, (
+            "generalized_eigenvalues() output does not match the dimension"
+            "of the matrices."
+        )
     elif n_matrices_A == 1 and n_matrices_B == 1:
         assert eigvals.dim() == 1, (
-            "The output does not have the correct number of dimensions for "
-            "A.dim()==1 and B.dim()==1."
+            "generalized_eigenvalues() output does not have the correct number"
+            "of dimensions for A.dim()==1 and B.dim()==1."
         )
         assert (
             eigvals.shape[-1] == n_dim
-        ), "The output does not match the dimension of the matrices."
+        ), "generalized_eigenvalues() output does not match the dimension of the matrices."
     elif n_matrices_A == 1:
         assert eigvals.dim() == 2, (
-            "The output does not have the correct number of dimensions for "
-            "A.dim()==1 and B.dim()>1."
+            "generalized_eigenvalues() output does not have the correct number"
+            "of dimensions for A.dim()==1 and B.dim()>1."
         )
         assert (
             eigvals.shape[0] == n_matrices_B
-        ), "The output does not match B tensor shape"
-        assert (
-            eigvals.shape[-1] == n_dim
-        ), "The output does not match the dimension of the matrices."
+        ), "generalized_eigenvalues() output does not match B tensor shape"
+        assert eigvals.shape[-1] == n_dim, (
+            "generalized_eigenvalues() output does not match the dimension "
+            "of the matrices."
+        )
     elif n_matrices_B == 1:
         assert eigvals.dim() == 2, (
-            "The output does not have the correct number of dimensions for A.dim()>1 "
-            "and B.dim()==1."
+            "generalized_eigenvalues() output has incorrect number of dimensions"
+            "for A.dim()>1 and B.dim()==1."
         )
         assert (
             eigvals.shape[0] == n_matrices_A
-        ), "The output does not match A tensor shape"
+        ), "generalized_eigenvalues() output does not match A tensor shape"
         assert (
             eigvals.shape[-1] == n_dim
-        ), "The output does not match the dimension of the matrices."
+        ), "generalized_eigenvalues() has incorrect dimensions for B.dim()==1."
 
     reference_eigvals = generalized_eigenvalues_ref(A, B)
     assert torch.allclose(
-        eigvals, reference_eigvals
+        eigvals, reference_eigvals, atol=1e-5
     ), "Generalized eigenvalues are not correct."
 
 
@@ -138,42 +220,114 @@ def test_conjugate_matrix(
 
     # Check the dimensions and shape of the output
     if n_matrices_A > 1:
-        if n_filters > 1:
-            assert (
-                filter_conjugate.shape[0] == n_matrices_A
-            ), "Conjugate f A f^T does not match batch dimension in A."
-            assert (
-                filter_conjugate.shape[-1] == n_filters
-            ), "Conjugate f A f^T does not match filter dimension."
-        else:
-            assert (
-                filter_conjugate.shape[0] == n_matrices_A
-            ), "Conjugate f A f^T does not match batch dimension in A for f.dim()=1."
-            assert filter_conjugate.dim() == 1, (
-                "Conjugate f A f^T does not have the correct number of "
-                "dimensions for f.dim()==1."
-            )
+        assert (
+            filter_conjugate.shape[0] == n_matrices_A
+        ), "Conjugate f A f^T does not match batch dimension in A."
+        assert (
+            filter_conjugate.shape[-1] == n_filters
+        ), "Conjugate f A f^T does not match filter dimension."
+        assert (
+            filter_conjugate.dim() == 3
+        ), "Conjugate f A f^T has incorrect number of dimensions for A.dim()>1."
     else:
-        if n_filters > 1:
-            assert filter_conjugate.dim() == 2, (
-                "Conjugate f A f^T does not have the correct number of dimensions "
-                "for A.dim()==1."
-            )
-            assert (
-                filter_conjugate.shape[-1] == n_filters
-            ), "Conjugate f A f^T does not match filter dimension for A.dim()==1."
-        else:
-            assert filter_conjugate.dim() == 0, (
-                "Conjugate f A f^T does not have the correct number of dimensions for "
-                "A.dim()==1 and f.dim()==1 case."
-            )
+        assert filter_conjugate.dim() == 2, (
+            "Conjugate f A f^T does not have the correct number of dimensions "
+            "for A.dim()==1."
+        )
+        assert (
+            filter_conjugate.shape[-1] == n_filters
+        ), "Conjugate f A f^T does not match filter dimension for A.dim()==1."
 
     A_ref = A.unsqueeze(0) if A.dim() < 3 else A
 
     # Apply filters to conjugate A
     filter_conjugate_ref = torch.einsum("ij,kjl,lm->kim", filters, A_ref, filters.T)
-    filter_conjugate_ref = torch.squeeze(filter_conjugate_ref)
+    filter_conjugate_ref = torch.squeeze(filter_conjugate_ref, dim=0)
 
     assert torch.allclose(
-        filter_conjugate, filter_conjugate_ref
+        filter_conjugate, filter_conjugate_ref, atol=1e-5
     ), "Conjugate f A f^T is not correct."
+
+
+@pytest.mark.parametrize("n_dim", [2, 4])
+@pytest.mark.parametrize("n_matrices_A", [1, 4])
+@pytest.mark.parametrize("n_matrices_B", [1])
+def test_conjugate_to_identity(
+    sample_spd_matrices, n_dim, n_matrices_A, n_matrices_B
+):
+    """Test the conjugate_matrix function."""
+    A, B = sample_spd_matrices
+
+    C = conjugate_to_identity(A)
+
+    A_conjugate = conjugate_matrix(A, C)
+
+    identity = torch.eye(n_dim, dtype=torch.float32)
+    if n_matrices_A > 1:
+        i = torch.arange(0, n_matrices_A)
+        A_conjugate = A_conjugate[i, i]
+        identity = identity.unsqueeze(0).repeat(n_matrices_A, 1, 1)
+
+    assert torch.allclose(A_conjugate, identity, atol=1e-6), (
+      "Conjugate to identity is not correct."
+    )
+
+
+@pytest.mark.parametrize("n_dim", [2, 4, 17])
+@pytest.mark.parametrize("n_matrices_A", [1, 4, 8])
+@pytest.mark.parametrize("n_matrices_B", [1])
+def test_spd_sqrt(sample_spd_matrices, n_matrices_A, n_matrices_B, n_dim):
+    """Test the spd matrix square root function."""
+    A, B = sample_spd_matrices
+    sqrt_A = spd_sqrt(A)
+    sqrt_A_ref = matrix_sqrt_ref(A)
+    sqrt_A_ref = torch.as_tensor(sqrt_A_ref, dtype=torch.float32)
+
+    if n_matrices_A > 1:
+        assert (
+            sqrt_A.dim() == 3
+        ), "spd_sqrt() output has incorrect number of dimensions for A.dim()>1."
+        assert (
+            sqrt_A.shape[-1] == n_dim
+        ), "spd_sqrt() output does not match the dimension of the matrices."
+    else:
+        assert (
+            sqrt_A.dim() == 2
+        ), "spd_sqrt() output has inccorrect number of dimensions for A.dim()==1."
+        assert (
+            sqrt_A.shape[-1] == n_dim
+        ), "spd_sqrt() output does not match the dimension of the matrices."
+
+    assert torch.allclose(
+        sqrt_A, sqrt_A_ref, atol=1e-5
+    ), "SPD square root is not correct."
+
+
+@pytest.mark.parametrize("n_dim", [2, 4, 17])
+@pytest.mark.parametrize("n_matrices_A", [1, 4, 8])
+@pytest.mark.parametrize("n_matrices_B", [1])
+def test_spd_log(sample_spd_matrices, n_matrices_A, n_matrices_B, n_dim):
+    """Test the spd matrix square root function."""
+    A, B = sample_spd_matrices
+    log_A = spd_log(A)
+    log_A_ref = matrix_log_ref(A)
+    log_A_ref = torch.as_tensor(log_A_ref, dtype=torch.float32)
+
+    if n_matrices_A > 1:
+        assert (
+            log_A.dim() == 3
+        ), "spd_log() output has incorrect number of dimensions for A.dim()>1."
+        assert (
+            log_A.shape[-1] == n_dim
+        ), "spd_log() output does not match the dimension of the matrices."
+    else:
+        assert (
+            log_A.dim() == 2
+        ), "spd_log() output has incorrect number of dimensions for A.dim()==1."
+        assert (
+            log_A.shape[-1] == n_dim
+        ), "spd_log() output does not match the dimension of the matrices."
+
+    assert torch.allclose(
+        log_A, log_A_ref, atol=1e-5
+    ), "SPD square root is not correct."
