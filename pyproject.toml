@@ -12,7 +12,6 @@ dependencies = [
   "numpy>=1.1",
   "torch>=1.8",
   "matplotlib",
-  "importlib-resources>=6.0",
   "tqdm>=4.29",
 ]
 keywords = ['covariance matrices', 'second moments', 'dimensionality reduction', 'machine learning', 'manifold', 'pytorch', 'information geometry']
