@@ -3,9 +3,11 @@
 import torch
 import torch.nn as nn
 from torch.nn.utils.parametrizations import orthogonal
-from torch.nn.utils.parametrize import register_parametrization
+from torch.nn.utils.parametrize import register_parametrization, remove_parametrizations
 
-from .constrains import Identity, Sphere
+from ._optim import fitting_loop
+from .constraints import FixedFilters, Identity, Sphere
+from .distances import _matrix_subset_distance_generator, affine_invariant_sq
 from .linalg_utils import conjugate_matrix
 
 __all__ = ["SQFA"]
@@ -63,12 +65,8 @@ class SQFA(nn.Module):
             feature_noise, dtype=torch.float32
         ) * torch.eye(n_filters)
         self.register_buffer("diagonal_noise", feature_noise_mat)
-        if constraint == "none":
-            register_parametrization(self, "filters", Identity())
-        elif constraint == "sphere":
-            register_parametrization(self, "filters", Sphere())
-        elif constraint == "orthogonal":
-            orthogonal(self, "filters")
+        self.constraint = constraint
+        self._add_constraint(constraint=self.constraint)
 
     def get_feature_covariances(self):
         """
@@ -98,3 +96,103 @@ class SQFA(nn.Module):
         """
         transformed_points = torch.einsum("ij,nj->ni", self.filters, data_points)
         return transformed_points
+
+    def fit(
+        self,
+        distance_fun=None,
+        epochs=100,
+        lr=0.1,
+        decay_step=1000,
+        decay_rate=1.0,
+        pairwise=False,
+        **kwargs,
+    ):
+        """
+        Fit the model.
+
+        Parameters
+        ----------
+        distance_fun : callable
+            Function to compute the distance between the transformed feature
+            covariances. Should take as input two tensors of shape
+            (n_classes, n_filters, n_filters) and return a matrix
+            of shape (n_classes, n_classes) with the pairwise distances
+            (or squared distances or similarities).
+            If None, then the Affine Invariant squared distance is used.
+        epochs : int
+            Number of epochs to train the model. Default is 100.
+        lr : float
+            Learning rate for the optimizer. Default is 0.1.
+        decay_step : int
+            Step at which to decay the learning rate. Default is 1000.
+        decay_rate : float
+            Rate at which to decay the learning rate. Default is 1.0.
+        pairwise : bool
+            If True, then filters are optimized pairwise (the first 2 filters
+            are optimized together, then held fixed and the next 2 filters are
+            optimized together, etc.). If False, all filters are optimized
+            together. Default is False.
+        **kwargs
+            Additional keyword arguments passed to the NAdam optimizer.
+        """
+        if distance_fun is None:
+            distance_fun = affine_invariant_sq
+
+        if not pairwise:
+            loss, training_time = fitting_loop(
+                self, distance_fun, epochs, lr, decay_step, decay_rate, **kwargs
+            )
+            return loss, training_time
+
+        else:
+            n_pairs = self.filters.shape[0] // 2
+
+            # Require n_pairs to be even
+            if self.filters.shape[0] % 2 != 0:
+                raise ValueError(
+                    "Number of filters must be even for pairwise training."
+                )
+
+            # Loop over pairs
+            for i in range(n_pairs):
+                # Make function to only evaluate distance on subset of filters
+                max_ind = min([2 * i + 2, self.filters.shape[0]])
+                inds_filters_used = torch.arange(max_ind)
+                distance_subset = _matrix_subset_distance_generator(
+                    subset_inds=inds_filters_used, distance_fun=distance_fun
+                )
+
+                # Fix the filters already trained
+                if i > 0:
+                    register_parametrization(
+                        self, "filters", FixedFilters(n_row_fixed=i * 2)
+                    )
+
+                # Train the current pair
+                loss, training_time = fitting_loop(
+                    self, distance_subset, epochs, lr, decay_step, decay_rate, **kwargs
+                )
+
+                # Remove fixed filter parametrization
+                remove_parametrizations(self, "filters")
+                self._add_constraint(constraint=self.constraint)
+
+                # Fix previously trained pairs
+            return loss, training_time
+
+    def _add_constraint(self, constraint="none"):
+        """
+        Add constraint to the filters.
+
+        Parameters
+        ----------
+        constraint : str
+            Constraint to apply to the filters. Can be 'none', 'sphere' or
+            'orthogonal'. Default is 'none'.
+        """
+        if constraint == "none":
+            register_parametrization(self, "filters", Identity())
+        elif constraint == "sphere":
+            register_parametrization(self, "filters", Sphere())
+        elif constraint == "orthogonal":
+            orthogonal(self, "filters")
