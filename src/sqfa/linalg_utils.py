@@ -30,10 +30,11 @@ def conjugate_matrix(A, B):
     if B.dim() < 2:
         raise ValueError("B must have at least 2 dimensions.")
     # Use einsum
-    # C = torch.einsum("...ij,njk,...kl->n...il", B, A, B.transpose(-2, -1))
+    C = torch.einsum("...ij,njk,...kl->n...il", B, A, B.transpose(-2, -1))
     # Use matmul
-    C = B[None, ...] @ A[:, None, ...] @ B.transpose(-2, -1)[None, ...]
-    return torch.squeeze(C, dim=(0, 1))
+    #C = B[None, ...] @ A[:, None, ...] @ B.transpose(-2, -1)[None, ...]
+    squeeze_dim = (0) if B.dim() == 2 else (0, 1)
+    return torch.squeeze(C, dim=squeeze_dim)
 
 
 def conjugate_to_identity(M):
