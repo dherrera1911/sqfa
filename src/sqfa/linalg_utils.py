@@ -15,24 +15,25 @@ def conjugate_matrix(A, B):
 
     ----------
     A : torch.Tensor
-        Matrix A. Shape (n_batch, n_dim, n_dim).
+        Matrix A. Shape (n_batch_A, n_dim, n_dim).
     B : torch.Tensor
-        Matrix B. Shape (..., n_dim, n_out).
+        Matrix B. Shape (n_batch_B, n_dim, n_out).
 
     Returns
     -------
     C : torch.Tensor
-        The conjugated matrix. Shape (..., n_batch, n_out, n_out).
+        The conjugated matrix. Shape (n_batch_A, n_batch_B, n_out, n_out).
+        If a batch dimension is 1, it is squeezed out.
     """
     if A.dim() == 2:
         A = A.unsqueeze(0)
     if B.dim() < 2:
         raise ValueError("B must have at least 2 dimensions.")
     # Use einsum
-    C = torch.einsum("...ij,njk,...kl->n...il", B, A, B.transpose(-2, -1))
+    # C = torch.einsum("...ij,njk,...kl->n...il", B, A, B.transpose(-2, -1))
     # Use matmul
-    # C = torch.matmul(B.transpose(-2,-1), torch.matmul(A, B))
-    return torch.squeeze(C)
+    C = B[None, ...] @ A[:, None, ...] @ B.transpose(-2, -1)[None, ...]
+    return torch.squeeze(C, dim=(0, 1))
 
 
 def conjugate_to_identity(M):
@@ -64,14 +65,15 @@ def generalized_eigenvalues(A, B):
     Parameters
     ----------
     A : torch.Tensor
-        Symmetric positive definite matrix. Shape (n_batch, n_dim, n_dim).
+        Symmetric positive definite matrix. Shape (n_batch_A, n_dim, n_dim).
     B : torch.Tensor
-        Symmetric positive definite matrix. Shape (n_batch, n_dim, n_dim).
+        Symmetric positive definite matrix. Shape (n_batch_B, n_dim, n_dim).
 
     Returns
     -------
     eigenvalues : torch.Tensor
-        The generalized eigenvalues of the pair (A, B). Shape (n_batch, n_dim).
+        The generalized eigenvalues of the pair (A, B). Shape (n_batch_A, n_batch_B, n_dim).
+        If a batch dimension is 1, it is squeezed out.
     """
     C = conjugate_to_identity(B)
     A_conj = conjugate_matrix(A, C)
@@ -88,12 +90,12 @@ def spd_sqrt(M):
     Parameters
     ----------
     M : torch.Tensor
-        Symmetric positive definite matrices. Shape (n_batch, n_dim, n_dim).
+        Symmetric positive definite matrices. Shape (..., n_dim, n_dim).
 
     Returns
     -------
     M_sqrt : torch.Tensor
-        The square root of M. Shape (n_batch, n_dim, n_dim).
+        The square root of M. Shape (..., n_dim, n_dim).
     """
     eigvals, eigvecs = torch.linalg.eigh(M)
     M_sqrt = torch.einsum(
@@ -109,12 +111,12 @@ def spd_log(M):
     Parameters
     ----------
     M : torch.Tensor
-        Symmetric positive definite matrices. Shape (n_batch, n_dim, n_dim).
+        Symmetric positive definite matrices. Shape (..., n_dim, n_dim).
 
     Returns
     -------
     M_log : torch.Tensor
-        The matrix logarithm of M. Shape (n_batch, n_dim, n_dim).
+        The matrix logarithm of M. Shape (..., n_dim, n_dim).
     """
     eigvals, eigvecs = torch.linalg.eigh(M)
     M_log = torch.einsum(

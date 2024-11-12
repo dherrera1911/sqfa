@@ -121,9 +121,8 @@ class FixedFilters(nn.Module):
         torch.Tensor
             Fixed value.
         """
-        fixed_tensor = X[:self.n_row_fixed].detach()
-        return torch.cat([fixed_tensor,
-                          X[self.n_row_fixed:]], dim=0)
+        fixed_tensor = X[: self.n_row_fixed].detach()
+        return torch.cat([fixed_tensor, X[self.n_row_fixed :]], dim=0)
 
     def right_inverse(self, X):
         """

@@ -68,7 +68,6 @@ def fitting_loop(
     total_start_time = time.time()
 
     for e in tqdm(range(epochs), desc="Epochs", unit="epoch"):
-
         covariances = model.get_feature_covariances()
         distances = distance_fun(covariances, covariances)
         epoch_loss = -torch.mean(distances[tril_ind[0], tril_ind[1]])
