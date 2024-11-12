@@ -53,7 +53,7 @@ def affine_invariant(A, B):
     distance : torch.Tensor
         Shape (n_batch_A, n_batch_B), the affine invariant distance.
     """
-    return torch.sqrt(affine_invariant(A, B))
+    return torch.sqrt(affine_invariant_sq(A, B))
 
 
 def log_euclidean_sq(A, B):
