@@ -1,4 +1,5 @@
 """Generate synthetic data for testing."""
+
 import geomstats.geometry.spd_matrices as spd
 import torch
 
