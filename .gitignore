@@ -3,3 +3,5 @@
 *.swp
 *.swo
 src/sqfa.egg-info
+docs/build
+docs/source/generated
