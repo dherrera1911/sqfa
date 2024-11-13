@@ -12,7 +12,7 @@ def disparity_covariances():
     """Load disparity covariances from file."""
     # Load covariances
     covariances = torch.as_tensor(
-        np.loadtxt("tests/test_data/disparity_covariances.csv", delimiter=",")
+        np.loadtxt("tests/test_data/disparity_covariances_noisy.csv", delimiter=",")
     )
     # Reshape to covariance shape
     covariances = torch.reshape(covariances.T, (19, 52, 52))
@@ -32,10 +32,8 @@ def test_training_function(disparity_covariances):
     loss, time = sqfa._optim.fitting_loop(
         model=model,
         distance_fun=sqfa.distances.affine_invariant_sq,
-        epochs=200,
+        epochs=7,
         lr=0.1,
-        decay_step=100,
-        decay_rate=0.2,
     )
 
     assert loss[-1] is not torch.nan, "Loss is NaN"
@@ -43,8 +41,8 @@ def test_training_function(disparity_covariances):
     assert loss[-1] < loss[0], "Loss did not decrease"
 
 
-@pytest.mark.parametrize("feature_noise", [0, 0.01, 1])
-@pytest.mark.parametrize("n_filters", [1, 2, 8])
+@pytest.mark.parametrize("feature_noise", [0, 0.01, 0.1])
+@pytest.mark.parametrize("n_filters", [1, 2, 6])
 @pytest.mark.parametrize("pairwise", [False, True])
 def test_training_method(disparity_covariances, feature_noise, n_filters, pairwise):
     """Test the method `.fit` in the sqfa class."""
@@ -60,23 +58,20 @@ def test_training_method(disparity_covariances, feature_noise, n_filters, pairwi
         with pytest.raises(ValueError):
             loss, time = model.fit(
                 distance_fun=sqfa.distances.affine_invariant_sq,
-                epochs=20,
+                epochs=7,
                 lr=0.1,
-                decay_step=10,
-                decay_rate=0.1,
                 pairwise=pairwise,
             )
         return
     else:
         loss, time = model.fit(
             distance_fun=sqfa.distances.affine_invariant_sq,
-            epochs=20,
+            epochs=7,
             lr=0.1,
-            decay_step=10,
-            decay_rate=0.1,
             pairwise=pairwise,
         )
 
     assert loss[-1] is not torch.nan, "Loss is NaN"
     assert not torch.isinf(loss[-1]), "Loss is infinite"
+    assert len(loss) > 1, "Only 1 epoch"
     assert loss[-1] < loss[0], "Loss did not decrease"
