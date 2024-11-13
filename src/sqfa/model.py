@@ -100,10 +100,8 @@ class SQFA(nn.Module):
     def fit(
         self,
         distance_fun=None,
-        epochs=100,
+        epochs=10,
         lr=0.1,
-        decay_step=1000,
-        decay_rate=1.0,
         pairwise=False,
         **kwargs,
     ):
@@ -140,7 +138,11 @@ class SQFA(nn.Module):
 
         if not pairwise:
             loss, training_time = fitting_loop(
-                self, distance_fun, epochs, lr, decay_step, decay_rate, **kwargs
+              model=self,
+              distance_fun=distance_fun,
+              epochs=epochs,
+              lr=lr,
+              **kwargs
             )
             return loss, training_time
 
@@ -154,6 +156,7 @@ class SQFA(nn.Module):
                 )
 
             # Loop over pairs
+            loss = torch.tensor([])
             for i in range(n_pairs):
                 # Make function to only evaluate distance on subset of filters
                 max_ind = min([2 * i + 2, self.filters.shape[0]])
@@ -169,15 +172,19 @@ class SQFA(nn.Module):
                     )
 
                 # Train the current pair
-                loss, training_time = fitting_loop(
-                    self, distance_subset, epochs, lr, decay_step, decay_rate, **kwargs
+                loss_pair, training_time = fitting_loop(
+                  model=self,
+                  distance_fun=distance_subset,
+                  epochs=epochs,
+                  lr=lr,
+                  **kwargs
                 )
 
                 # Remove fixed filter parametrization
                 remove_parametrizations(self, "filters")
                 self._add_constraint(constraint=self.constraint)
+                loss = torch.cat((loss, loss_pair))
 
-                # Fix previously trained pairs
             return loss, training_time
 
     def _add_constraint(self, constraint="none"):
