@@ -73,13 +73,58 @@ def generalized_eigenvalues(A, B):
     Returns
     -------
     eigenvalues : torch.Tensor
-        The generalized eigenvalues of the pair (A, B). Shape (n_batch_A, n_batch_B, n_dim).
+        The generalized eigenvalues of the pair (A, B), sorted in descending
+        order. Shape (n_batch_A, n_batch_B, n_dim).
         If a batch dimension is 1, it is squeezed out.
     """
     C = conjugate_to_identity(B)
     A_conj = conjugate_matrix(A, C)
     eigenvalues = torch.linalg.eigvalsh(A_conj)
-    return eigenvalues
+    return eigenvalues.flip(-1)
+
+
+def generalized_eigenvectors(A, B):
+    """
+    Compute the generalized eigenvectors of the pair of symmetric positive
+    definite matrices (A, B).
+
+    Parameters
+    ----------
+    A : torch.Tensor
+        Symmetric positive definite matrix. Shape (n_batch_A, n_dim, n_dim).
+    B : torch.Tensor
+        Symmetric positive definite matrix. Shape (n_batch_B, n_dim, n_dim).
+
+    Returns
+    -------
+    eigenvectors: torch.Tensor
+        The generalized eigenvectors sorted in descending order
+        of the eigenvalues.
+        Shape (n_batch_A, n_batch_B, n_dim, n_dim).
+        If a batch dimension is 1, it is squeezed out.
+    eigenvalues : torch.Tensor
+        The generalized eigenvalues sorted in descending order.
+        Shape (n_batch_A, n_batch_B, n_dim).
+        If a batch dimension is 1, it is squeezed out.
+    """
+    C = conjugate_to_identity(B)
+    A_conj = conjugate_matrix(A, C)
+    if A.dim() == 2:
+        A_conj = A_conj.unsqueeze(0)
+    if B.dim() == 2:
+        C = C.unsqueeze(0)
+        A_conj = A_conj.unsqueeze(1)
+    eigenvalues, eigenvectors = torch.linalg.eigh(A_conj)
+
+    # Flip the order of the eigenvectors
+    eigenvectors = eigenvectors.flip(-1)
+    eigenvalues = eigenvalues.flip(-1)
+
+    # Transform eigenvectors back to the original basis
+    eigenvectors = torch.einsum("bij,abjk->abik", C.transpose(-2,-1), eigenvectors)
+    eigenvectors = eigenvectors / torch.linalg.norm(eigenvectors, dim=-2, keepdim=True)
+
+    return torch.squeeze(eigenvectors, dim=(0,1)), torch.squeeze(eigenvalues, dim=(0,1))
 
 
 def spd_sqrt(M):
