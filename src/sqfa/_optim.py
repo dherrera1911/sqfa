@@ -18,7 +18,7 @@ def fitting_loop(
     distance_fun,
     epochs=30,
     lr=0.1,
-    atol=1e-8,
+    atol=1e-6,
     **kwargs,
 ):
     """
