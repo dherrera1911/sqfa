@@ -5,3 +5,4 @@ from . import constraints as constraints
 from . import distances as distances
 from . import linalg_utils as linalg_utils
 from . import model as model
+from . import plot as plot
