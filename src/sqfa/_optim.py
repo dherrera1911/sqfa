@@ -16,9 +16,11 @@ def __dir__():
 def fitting_loop(
     model,
     distance_fun,
-    epochs=30,
+    epochs=50,
     lr=0.1,
     atol=1e-6,
+    show_progress=True,
+    return_loss=False,
     **kwargs,
 ):
     """
@@ -38,6 +40,10 @@ def fitting_loop(
         Learning rate, by default 0.1.
     atol : float, optional
         Tolerance for stopping training, by default 1e-8.
+    show_progress : bool
+        If True, show a progress bar during training. Default is True.
+    return_loss : bool
+        If True, return the loss after training. Default is False.
     kwargs : dict
         Additional arguments to pass to LBFGS optimizer.
 
@@ -71,25 +77,30 @@ def fitting_loop(
         epoch_loss.backward()
         return epoch_loss
 
-    for e in tqdm(range(epochs), desc="Epochs", unit="epoch"):
+    for e in tqdm(range(epochs), desc="Epochs", unit="epoch", disable=not show_progress):
 
         epoch_loss = optimizer.step(closure)
         epoch_time = time.time() - total_start_time
         loss_change = prev_loss - epoch_loss.item()
 
         # Update tqdm bar description with loss change and total time
-        tqdm.write(
-            f"Epoch {e+1}/{epochs}, Loss: {epoch_loss.item():.4f}, "
-            f"Change: {loss_change:.4f}, Time: {epoch_time:.2f}s"
-        )
+        #tqdm.write(
+        #    f"Epoch {e+1}/{epochs}, Loss: {epoch_loss.item():.4f}, "
+        #    f"Change: {loss_change:.4f}, Time: {epoch_time:.2f}s"
+        #)
 
-        # Break if loss change is below 1e-8
+        # Break if loss change is below atol
         if loss_change <= atol and loss_change >= 0:
-            tqdm.write(f"Loss change below {atol}, stopping training.")
+            tqdm.write(
+              f"Loss change below {atol}, stopping training at epoch {e+1}/{epochs}."
+            )
             break
 
         prev_loss = epoch_loss.item()
         training_time.append(epoch_time)
         loss_list.append(epoch_loss.item())
 
-    return torch.tensor(loss_list), torch.tensor(training_time)
+    if return_loss:
+        return torch.tensor(loss_list), torch.tensor(training_time)
+    else:
+        return None

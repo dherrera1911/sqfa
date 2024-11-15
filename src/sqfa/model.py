@@ -103,6 +103,8 @@ class SQFA(nn.Module):
         epochs=10,
         lr=0.1,
         pairwise=False,
+        show_progress=True,
+        return_loss=False,
         **kwargs,
     ):
         """
@@ -130,6 +132,10 @@ class SQFA(nn.Module):
             are optimized together, then held fixed and the next 2 filters are
             optimized together, etc.). If False, all filters are optimized
             together. Default is False.
+        show_progress : bool
+            If True, show a progress bar during training. Default is True.
+        return_loss : bool
+            If True, return the loss after training. Default is False.
         **kwargs
             Additional keyword arguments passed to the NAdam optimizer.
         """
@@ -142,9 +148,10 @@ class SQFA(nn.Module):
               distance_fun=distance_fun,
               epochs=epochs,
               lr=lr,
+              show_progress=show_progress,
+              return_loss=True,
               **kwargs
             )
-            return loss, training_time
 
         else:
             n_pairs = self.filters.shape[0] // 2
@@ -157,6 +164,7 @@ class SQFA(nn.Module):
 
             # Loop over pairs
             loss = torch.tensor([])
+            training_time = torch.tensor([])
             for i in range(n_pairs):
                 # Make function to only evaluate distance on subset of filters
                 max_ind = min([2 * i + 2, self.filters.shape[0]])
@@ -177,6 +185,8 @@ class SQFA(nn.Module):
                   distance_fun=distance_subset,
                   epochs=epochs,
                   lr=lr,
+                  show_progress=show_progress,
+                  return_loss=True,
                   **kwargs
                 )
 
@@ -184,8 +194,12 @@ class SQFA(nn.Module):
                 remove_parametrizations(self, "filters")
                 self._add_constraint(constraint=self.constraint)
                 loss = torch.cat((loss, loss_pair))
+                training_time = torch.cat((training_time, training_time))
 
-            return loss, training_time
+            if return_loss:
+                return loss, training_time
+            else:
+                return None
 
     def _add_constraint(self, constraint="none"):
         """
