@@ -74,14 +74,4 @@ exclude_patterns = []
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
-html_theme_options = {
-    "home_page_in_toc": True,
-    "github_url": "https://github.com/dherrera1911/sqfa",
-    "repository_url": "https://github.com/dherrera1911/sqfa",
-    "logo": {
-        "alt_text": "Home",
-        "image_light": "_static/sqfa.svg",
-    },
-    "use_download_button": True,
-    "use_repository_button": True,
-}
+#html_theme_options = {}

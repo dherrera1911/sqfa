@@ -5,5 +5,8 @@
     :toctree: generated/
     :recursive:
 
-    sqfa
+    sqfa.distances
+    sqfa.linalg_utils
+    sqfa.plot
 ```
+
