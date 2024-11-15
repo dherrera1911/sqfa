@@ -11,7 +11,7 @@ kernelspec:
   name: python3
 ---
 
-# SQFA vs other techniques - Toy Problem
+# SQFA vs PCA and LDA - Toy Problem
 
 In this tutorial we build a simple toy problem to illustrate the types of features
 that are learnt by SQFA, and how they compare to other standard feature
@@ -75,10 +75,14 @@ angles = torch.as_tensor([15, 45, 70])
 class_covariances = make_rotated_classes(base_cov, angles)
 
 # Plot the covariances
-fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+fig, ax = plt.subplots(1, 2, figsize=(7, 3.5))
 sqfa.plot.statistics_ellipses(ellipses=class_covariances, dim_pair=(0, 1), ax=ax[0])
 sqfa.plot.statistics_ellipses(ellipses=class_covariances, dim_pair=(2, 3),
                               ax=ax[1], legend_type='discrete')
+# Add title to the plot
+ax[0].set_title('Class statistics for dimensions 1 and 2')
+ax[1].set_title('Class statistics for dimensions 3 and 4')
+plt.tight_layout()
 plt.show()
 ```
 
@@ -98,7 +102,7 @@ model = sqfa.model.SQFA(
   feature_noise=0.001,
   n_filters=2
 )
-model.fit(epochs=20)
+model.fit(show_progress=False)
 sqfa_filters = model.filters.detach()
 
 # Learn PCA filters
@@ -121,9 +125,11 @@ ax[1].set_title('PCA filters')
 ax[0].set_xlabel('Dimension')
 ax[1].set_xlabel('Dimension')
 ax[0].set_ylabel('Weight')
+ax[0].set_xticks(torch.arange(1, 5))
+ax[1].set_xticks(torch.arange(1, 5))
+# Leave only the integer ticks, with simple code
 plt.tight_layout()
 plt.show()
-
 ```
 
 We see that the filters learned by SQFA put more weight on the dimensions
@@ -143,11 +149,11 @@ kwargs = {
     'title': 'Class',
 } # Legend arguments
 
-fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+fig, ax = plt.subplots(1, 2, figsize=(7, 3.5))
 sqfa.plot.statistics_ellipses(ellipses=sqfa_covariances, ax=ax[0])
 sqfa.plot.statistics_ellipses(ellipses=pca_covariances, ax=ax[1], legend_type='discrete', **kwargs)
-ax[0].set_title('SQFA features')
-ax[1].set_title('PCA features')
+ax[0].set_title('SQFA feature statistics')
+ax[1].set_title('PCA feature statistics')
 ax[0].set_xlabel('Feature 1')
 ax[0].set_xlabel('Feature 2')
 ax[1].set_xlabel('Feature 1')
@@ -175,12 +181,12 @@ in the first two dimensions and visualize the new distributions.
 class_means = torch.tensor([[1, 0, 0, 0],
                             [0, 1, 0, 0],
                             [-1, 0, 0, 0]])
-class_means = class_means * 0.5
+class_means = class_means * 0.4
 
 # Plot the new distributions
 dim_pairs = [(0, 1), (2, 3)]
 
-fig, ax = plt.subplots(1, 2, figsize=(8, 4))
+fig, ax = plt.subplots(1, 2, figsize=(7, 3.5))
 for i, dim_pair in enumerate(dim_pairs):
     sqfa.plot.statistics_ellipses(ellipses=class_covariances,
                                   centers=class_means,
@@ -192,6 +198,8 @@ for i, dim_pair in enumerate(dim_pairs):
                            ax=ax[i])
     ax[i].set_xlabel(f'Dimension {dim_pair[0]+1}')
     ax[i].set_ylabel(f'Dimension {dim_pair[1]+1}')
+ax[0].set_title('Class statistics for dimensions 1 and 2')
+ax[1].set_title('Class statistics for dimensions 3 and 4')
 plt.tight_layout()
 plt.show()
 ```
@@ -234,7 +242,7 @@ model = sqfa.model.SQFA(
   feature_noise=0.001,
   n_filters=2
 )
-loss, time = model.fit(epochs=20)
+model.fit(show_progress=False)
 sqfa_filters = model.filters.detach()
 ```
 
@@ -252,6 +260,8 @@ ax[1].set_title('LDA filters')
 ax[0].set_xlabel('Dimension')
 ax[1].set_xlabel('Dimension')
 ax[0].set_ylabel('Weight')
+ax[0].set_xticks(torch.arange(1, 5))
+ax[1].set_xticks(torch.arange(1, 5))
 plt.tight_layout()
 plt.show()
 ```
@@ -274,7 +284,7 @@ kwargs = {
     'title': 'Class',
 } # Legend arguments
 
-fig, ax = plt.subplots(1, 2, figsize=(10, 5), sharex=True, sharey=True)
+fig, ax = plt.subplots(1, 2, figsize=(7, 3.5))
 
 # SQFA statistics
 sqfa.plot.statistics_ellipses(ellipses=sqfa_covariances,
@@ -285,8 +295,8 @@ sqfa.plot.statistics_ellipses(ellipses=lda_covariances, centers=lda_means,
                               ax=ax[1], legend_type='discrete', **kwargs)
 sqfa.plot.scatter_data(data=lda_means, labels=torch.arange(3), ax=ax[1])
 
-ax[0].set_title('SQFA features')
-ax[1].set_title('LDA features')
+ax[0].set_title('SQFA feature statistics')
+ax[1].set_title('LDA feature statistics')
 ax[0].set_xlabel('Feature 1')
 ax[0].set_ylabel('Feature 2')
 ax[1].set_xlabel('Feature 1')
@@ -334,6 +344,8 @@ for i, dim_pair in enumerate(dim_pairs):
                            ax=ax[i])
     ax[i].set_xlabel(f'Dimension {dim_pair[0]+1}')
     ax[i].set_ylabel(f'Dimension {dim_pair[1]+1}')
+ax[0].set_title('Class statistics for dimensions 1 and 2')
+ax[1].set_title('Class statistics for dimensions 3 and 4')
 plt.tight_layout()
 plt.show()
 ```
@@ -351,7 +363,7 @@ model = sqfa.model.SQFA(
   feature_noise=0.001,
   n_filters=2
 )
-loss, time = model.fit(epochs=20)
+model.fit(show_progress=False)
 sqfa_filters = model.filters.detach()
 ```
 
@@ -367,6 +379,7 @@ for f in range(2):
 ax[0].set_title('SQFA filters')
 ax[0].set_xlabel('Dimension')
 ax[0].set_ylabel('Weight')
+ax[0].set_xticks(torch.arange(1, 5))
 
 # Get the means and covariances for the new features
 sqfa_covariances = torch.einsum('ij,njk,kl->nil', sqfa_filters, class_covariances, sqfa_filters.T)
@@ -376,7 +389,7 @@ sqfa_means = class_means @ sqfa_filters.T
 sqfa.plot.statistics_ellipses(ellipses=sqfa_covariances,
                               centers=sqfa_means, ax=ax[1])
 sqfa.plot.scatter_data(data=sqfa_means, labels=torch.arange(3), ax=ax[1])
-ax[1].set_title('SQFA features')
+ax[1].set_title('SQFA feature statistics')
 ax[1].set_xlabel('Feature 1')
 ax[1].set_ylabel('Feature 2')
 plt.tight_layout()
