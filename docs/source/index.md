@@ -1,4 +1,4 @@
-# AMAtorch
+# SQFA
 
 <img src="_static/sqfa.svg" width="500" height="200">
 
