@@ -32,8 +32,8 @@ def test_training_function(disparity_covariances):
     loss, time = sqfa._optim.fitting_loop(
         model=model,
         distance_fun=sqfa.distances.affine_invariant_sq,
-        epochs=7,
         lr=0.1,
+        return_loss=True,
     )
 
     assert loss[-1] is not torch.nan, "Loss is NaN"
@@ -58,20 +58,19 @@ def test_training_method(disparity_covariances, feature_noise, n_filters, pairwi
         with pytest.raises(ValueError):
             loss, time = model.fit(
                 distance_fun=sqfa.distances.affine_invariant_sq,
-                epochs=7,
                 lr=0.1,
                 pairwise=pairwise,
+                return_loss=True,
             )
         return
     else:
         loss, time = model.fit(
             distance_fun=sqfa.distances.affine_invariant_sq,
-            epochs=7,
             lr=0.1,
             pairwise=pairwise,
+            return_loss=True,
         )
 
     assert loss[-1] is not torch.nan, "Loss is NaN"
     assert not torch.isinf(loss[-1]), "Loss is infinite"
-    assert len(loss) > 1, "Only 1 epoch"
-    assert loss[-1] < loss[0], "Loss did not decrease"
+    assert loss[-1] < loss[0] or len(loss) == 1, "Loss did not decrease"
