@@ -196,10 +196,10 @@ class SQFA(nn.Module):
                 loss = torch.cat((loss, loss_pair))
                 training_time = torch.cat((training_time, training_time))
 
-            if return_loss:
-                return loss, training_time
-            else:
-                return None
+        if return_loss:
+            return loss, training_time
+        else:
+            return None
 
     def _add_constraint(self, constraint="none"):
         """
