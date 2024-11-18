@@ -200,7 +200,8 @@ def class_statistics(points, labels):
         n_points = class_points.shape[0]
         means[i] = torch.mean(class_points, dim=0)
         second_moments[i] = torch.einsum("ij,jk->ik", class_points.T, class_points) / n_points
-        covariances[i] = second_moments[i] - torch.einsum("i,j->ij", means[i], means[i])
+        covariances[i] = (second_moments[i] - torch.einsum("i,j->ij", means[i], means[i])) \
+            * n_points / (n_points - 1)
     statistics_dict = {
         "means": means,
         "covariances": covariances,
