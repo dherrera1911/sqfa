@@ -8,7 +8,7 @@ from torch.nn.utils.parametrize import register_parametrization, remove_parametr
 from ._optim import fitting_loop
 from .constraints import FixedFilters, Identity, Sphere
 from .distances import _matrix_subset_distance_generator, affine_invariant_sq
-from .linalg_utils import conjugate_matrix
+from .linalg_utils import conjugate_matrix, class_statistics
 
 __all__ = ["SQFA"]
 
@@ -140,7 +140,9 @@ class SQFA(nn.Module):
 
     def fit(
         self,
-        second_moments,
+        second_moments=None,
+        X=None,
+        y=None,
         max_epochs=50,
         lr=0.1,
         pairwise=False,
@@ -155,7 +157,14 @@ class SQFA(nn.Module):
         ----------
         second_moments : torch.Tensor
             Tensor of shape (n_classes, n_dim, n_dim) with the second moments
-            of the data for each class.
+            of the data for each class. If None, then X and y must be provided.
+            Default is None.
+        X : torch.Tensor
+            Input data of shape (n_samples, n_dim). If second_moments is None,
+            then X and y must be provided.
+        y : torch.Tensor
+            Labels of shape (n_samples,). If second_moments is None, then X
+            and y must be provided. Labels must be integers starting from 0.
         max_epochs : int, optional
             Number of max training epochs. By default 50.
         lr : float
@@ -176,6 +185,12 @@ class SQFA(nn.Module):
         **kwargs
             Additional keyword arguments passed to the NAdam optimizer.
         """
+        if second_moments is None:
+            if X is None or y is None:
+                raise ValueError("Either second_moments or X and y must be provided.")
+            stats_dict = class_statistics(X, y)
+            second_moments = stats_dict["second_moments"]
+
         if not pairwise:
             loss, training_time = fitting_loop(
               model=self,

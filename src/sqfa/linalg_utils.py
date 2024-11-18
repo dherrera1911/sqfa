@@ -170,3 +170,41 @@ def spd_log(M):
         "...ij,...j,...kj->...ik", eigvecs, torch.log(eigvals), eigvecs
     )
     return M_log
+
+
+def class_statistics(points, labels):
+    """
+    Compute the mean, covariance and second moment matrix of each class.
+
+    Parameters
+    ----------
+    points : torch.Tensor
+        Data points with shape (n_points, n_dim).
+    labels : torch.Tensor
+        Class labels of each point with shape (n_points).
+
+    Returns
+    -------
+    statistics_dict : dict
+        Dictionary containing the mean, covariance and second moment matrix
+        of each class.
+    """
+    n_classes = int(torch.max(labels) + 1)
+    n_dim = points.shape[-1]
+    means = torch.zeros(n_classes, n_dim)
+    covariances = torch.zeros(n_classes, n_dim, n_dim)
+    second_moments = torch.zeros(n_classes, n_dim, n_dim)
+    for i in range(n_classes):
+        indices = (labels == i).nonzero().squeeze(1)
+        class_points = points[indices]
+        n_points = class_points.shape[0]
+        means[i] = torch.mean(class_points, dim=0)
+        second_moments[i] = torch.einsum("ij,jk->ik", class_points.T, class_points) / n_points
+        covariances[i] = second_moments[i] - torch.einsum("i,j->ij", means[i], means[i])
+    statistics_dict = {
+        "means": means,
+        "covariances": covariances,
+        "second_moments": second_moments,
+    }
+    return statistics_dict
+
