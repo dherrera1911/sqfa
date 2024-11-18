@@ -2,7 +2,8 @@
 
 import torch
 
-__all__ = ["conjugate_matrix", "generalized_eigenvalues", "generalized_eigenvectors", "spd_sqrt", "spd_log", "conjugate_to_identity"]
+__all__ = ["conjugate_matrix", "generalized_eigenvalues", "generalized_eigenvectors", "spd_sqrt",
+           "spd_log", "conjugate_to_identity", "class_statistics"]
 
 
 def __dir__():
