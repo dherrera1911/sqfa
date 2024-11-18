@@ -47,7 +47,7 @@ class SQFA(nn.Module):
             initialized. Default is None. Of shape (n_filters, n_dim).
         distance_fun : callable
             Function to compute the distance between the transformed feature
-            second moments. Should take as input two tensors of shape
+            scatter matrices. Should take as input two tensors of shape
             (n_classes, n_filters, n_filters) and return a matrix
             of shape (n_classes, n_classes) with the pairwise distances
             (or squared distances or similarities).
@@ -78,13 +78,13 @@ class SQFA(nn.Module):
         self.constraint = constraint
         self._add_constraint(constraint=self.constraint)
 
-    def transform_second_moments(self, data_second_moments):
+    def transform_scatters(self, data_scatters):
         """
-        Transform data second moments to feature space second moments.
+        Transform data scatter matrices to feature space scatter matrices.
 
         Parameters
         ----------
-        data_second_moments : torch.Tensor
+        data_scatters : torch.Tensor
             Tensor of shape (n_classes, n_dim, n_dim).
 
         Returns
@@ -92,33 +92,33 @@ class SQFA(nn.Module):
         torch.Tensor shape (n_classes, n_filters, n_filters)
             Covariances of the transformed features.
         """
-        transformed_second_moments = conjugate_matrix(data_second_moments, self.filters)
-        return transformed_second_moments
+        feature_scatters = conjugate_matrix(data_scatters, self.filters)
+        return feature_scatters
 
-    def get_class_distances(self, data_second_moments, regularized=False):
+    def get_class_distances(self, data_scatters, regularized=False):
         """
-        Compute the pairwise distances between the feature second moments of the
+        Compute the pairwise distances between the feature scatter matrices of the
         different classes.
 
         Parameters
         ----------
-        data_second_moments : torch.Tensor
+        data_scatters : torch.Tensor
             Tensor of shape (n_classes, n_dim, n_dim).
         regularized : bool
             If True, regularize the distances by adding a small value to the
-            diagonal of the transformed second_moments. Default is False.
+            diagonal of the transformed scatter matrices. Default is False.
 
         Returns
         -------
         torch.Tensor shape (n_classes, n_classes)
-            Pairwise distances between the transformed feature second_moments.
+            Pairwise distances between the transformed feature scatter matrices.
         """
-        transformed_second_moments = self.transform_second_moments(data_second_moments)
+        feature_scatters = self.transform_scatters(data_scatters)
 
         if regularized:
-            transformed_second_moments = transformed_second_moments + self.diagonal_noise[None, :, :]
+            feature_scatters = feature_scatters + self.diagonal_noise[None, :, :]
 
-        distances = self.distance_fun(transformed_second_moments, transformed_second_moments)
+        distances = self.distance_fun(feature_scatters, feature_scatters)
         return distances
 
     def transform(self, data_points):
@@ -140,9 +140,9 @@ class SQFA(nn.Module):
 
     def fit(
         self,
-        second_moments=None,
         X=None,
         y=None,
+        data_scatters=None,
         max_epochs=50,
         lr=0.1,
         pairwise=False,
@@ -155,16 +155,16 @@ class SQFA(nn.Module):
 
         Parameters
         ----------
-        second_moments : torch.Tensor
+        X : torch.Tensor
+            Input data of shape (n_samples, n_dim). If data_scatters is None,
+            then X and y must be provided.
+        y : torch.Tensor
+            Labels of shape (n_samples,). If data_scatters is None, then X
+            and y must be provided. Labels must be integers starting from 0.
+        data_scatters : torch.Tensor
             Tensor of shape (n_classes, n_dim, n_dim) with the second moments
             of the data for each class. If None, then X and y must be provided.
             Default is None.
-        X : torch.Tensor
-            Input data of shape (n_samples, n_dim). If second_moments is None,
-            then X and y must be provided.
-        y : torch.Tensor
-            Labels of shape (n_samples,). If second_moments is None, then X
-            and y must be provided. Labels must be integers starting from 0.
         max_epochs : int, optional
             Number of max training epochs. By default 50.
         lr : float
@@ -185,16 +185,16 @@ class SQFA(nn.Module):
         **kwargs
             Additional keyword arguments passed to the NAdam optimizer.
         """
-        if second_moments is None:
+        if data_scatters is None:
             if X is None or y is None:
-                raise ValueError("Either second_moments or X and y must be provided.")
+                raise ValueError("Either data_scatters or X and y must be provided.")
             stats_dict = class_statistics(X, y)
-            second_moments = stats_dict["second_moments"]
+            data_scatters = stats_dict["second_moments"]
 
         if not pairwise:
             loss, training_time = fitting_loop(
               model=self,
-              second_moments=second_moments,
+              data_scatters=data_scatters,
               max_epochs=max_epochs,
               lr=lr,
               show_progress=show_progress,
@@ -232,7 +232,7 @@ class SQFA(nn.Module):
                 # Train the current pair
                 loss_pair, training_time = fitting_loop(
                   model=self,
-                  second_moments=second_moments,
+                  data_scatters=data_scatters,
                   max_epochs=max_epochs,
                   lr=lr,
                   show_progress=show_progress,

@@ -15,7 +15,7 @@ def __dir__():
 
 def fitting_loop(
     model,
-    second_moments,
+    data_scatters,
     max_epochs=50,
     lr=0.1,
     atol=1e-6,
@@ -30,8 +30,8 @@ def fitting_loop(
     ----------
     model : SQFA model object
         The model used for fitting.
-    second_moments : torch.Tensor
-        Tensor of shape (n_classes, n_dim, n_dim) with the second moments
+    data_scatters : torch.Tensor
+        Tensor of shape (n_classes, n_dim, n_dim) with the scatter matrices
         of the data for each class.
     distance_fun : callable
         Function returning pairwise distances between covariance matrices.
@@ -65,12 +65,12 @@ def fitting_loop(
 
     def closure():
         optimizer.zero_grad()
-        distances = model.get_class_distances(second_moments, regularized=True)
+        distances = model.get_class_distances(data_scatters, regularized=True)
         epoch_loss = -torch.mean(distances[tril_ind[0], tril_ind[1]])
         epoch_loss.backward()
         return epoch_loss
 
-    n_classes = second_moments.shape[0]
+    n_classes = data_scatters.shape[0]
     tril_ind = torch.tril_indices(n_classes, n_classes, offset=-1)
     loss_list = []
     training_time = []

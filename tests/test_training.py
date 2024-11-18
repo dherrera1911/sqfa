@@ -33,7 +33,7 @@ def test_training_function(disparity_covariances):
 
     loss, time = sqfa._optim.fitting_loop(
         model=model,
-        second_moments=covariances,
+        data_scatters=covariances,
         lr=0.1,
         return_loss=True,
         max_epochs=MAX_EPOCHS,
@@ -60,7 +60,7 @@ def test_training_method(disparity_covariances, feature_noise, n_filters, pairwi
     if n_filters == 1 and pairwise:
         with pytest.raises(ValueError):
             loss, time = model.fit(
-                second_moments=covariances,
+                data_scatters=covariances,
                 lr=0.1,
                 pairwise=pairwise,
                 return_loss=True,
@@ -69,7 +69,7 @@ def test_training_method(disparity_covariances, feature_noise, n_filters, pairwi
         return
     else:
         loss, time = model.fit(
-            second_moments=covariances,
+            data_scatters=covariances,
             lr=0.1,
             pairwise=pairwise,
             return_loss=True,
