@@ -6,6 +6,7 @@ import torch
 
 import sqfa
 
+MAX_EPOCHS = 20
 
 @pytest.fixture(scope="function")
 def disparity_covariances():
@@ -16,6 +17,7 @@ def disparity_covariances():
     )
     # Reshape to covariance shape
     covariances = torch.reshape(covariances.T, (19, 52, 52))
+    covariances = covariances.float()
     return covariances
 
 
@@ -24,16 +26,17 @@ def test_training_function(disparity_covariances):
     covariances = disparity_covariances
 
     model = sqfa.model.SQFA(
-        input_covariances=covariances,
+        n_dim=covariances.shape[-1],
         feature_noise=0.01,
         n_filters=2,
     )
 
     loss, time = sqfa._optim.fitting_loop(
         model=model,
-        distance_fun=sqfa.distances.affine_invariant_sq,
+        second_moments=covariances,
         lr=0.1,
         return_loss=True,
+        max_epochs=MAX_EPOCHS,
     )
 
     assert loss[-1] is not torch.nan, "Loss is NaN"
@@ -49,7 +52,7 @@ def test_training_method(disparity_covariances, feature_noise, n_filters, pairwi
     covariances = disparity_covariances
 
     model = sqfa.model.SQFA(
-        input_covariances=covariances,
+        n_dim=covariances.shape[-1],
         feature_noise=feature_noise,
         n_filters=n_filters,
     )
@@ -57,18 +60,20 @@ def test_training_method(disparity_covariances, feature_noise, n_filters, pairwi
     if n_filters == 1 and pairwise:
         with pytest.raises(ValueError):
             loss, time = model.fit(
-                distance_fun=sqfa.distances.affine_invariant_sq,
+                second_moments=covariances,
                 lr=0.1,
                 pairwise=pairwise,
                 return_loss=True,
+                max_epochs=MAX_EPOCHS,
             )
         return
     else:
         loss, time = model.fit(
-            distance_fun=sqfa.distances.affine_invariant_sq,
+            second_moments=covariances,
             lr=0.1,
             pairwise=pairwise,
             return_loss=True,
+            max_epochs=MAX_EPOCHS,
         )
 
     assert loss[-1] is not torch.nan, "Loss is NaN"

@@ -22,10 +22,11 @@ class SQFA(nn.Module):
 
     def __init__(
         self,
-        input_covariances,
+        n_dim,
         feature_noise=0,
         n_filters=2,
         filters=None,
+        distance_fun=None,
         constraint="sphere",
     ):
         """
@@ -33,9 +34,8 @@ class SQFA(nn.Module):
 
         Parameters
         ----------
-        input_covariances : torch.Tensor
-            Covariance matrices of the input data for each class, of
-            shape (n_classes, n_dim, n_dim).
+        n_dim : int
+            Dimension of the input data space.
         feature_noise : float
             Noise added to the features outputs, i.e. a diagonal term added
             to the covariance matrix of the features. Default is 0.
@@ -45,12 +45,18 @@ class SQFA(nn.Module):
         filters : torch.Tensor
             Filters to use. If n_filters is provided, filters are randomly
             initialized. Default is None. Of shape (n_filters, n_dim).
+        distance_fun : callable
+            Function to compute the distance between the transformed feature
+            second moments. Should take as input two tensors of shape
+            (n_classes, n_filters, n_filters) and return a matrix
+            of shape (n_classes, n_classes) with the pairwise distances
+            (or squared distances or similarities).
+            If None, then the Affine Invariant squared distance is used.
         constraint : str
             Constraint to apply to the filters. Can be 'none', 'sphere' or
             'orthogonal'. Default is 'sphere'.
         """
         super().__init__()
-        n_dim = input_covariances.shape[-1]
 
         if filters is None:
             filters = torch.randn(n_filters, n_dim)
@@ -58,27 +64,62 @@ class SQFA(nn.Module):
             filters = torch.as_tensor(filters, dtype=torch.float32)
 
         self.filters = nn.Parameter(filters)
-        self.register_buffer(
-            "input_covariances", torch.as_tensor(input_covariances, dtype=torch.float32)
-        )
+
         feature_noise_mat = torch.as_tensor(
             feature_noise, dtype=torch.float32
         ) * torch.eye(n_filters)
         self.register_buffer("diagonal_noise", feature_noise_mat)
+
+        if distance_fun is None:
+            self.distance_fun = affine_invariant_sq
+        else:
+            self.distance_fun = distance_fun
+
         self.constraint = constraint
         self._add_constraint(constraint=self.constraint)
 
-    def transform_second_moments(self):
+    def transform_second_moments(self, data_second_moments):
         """
-        Transform input covariances to filter response covariances.
+        Transform data second moments to feature space second moments.
+
+        Parameters
+        ----------
+        data_second_moments : torch.Tensor
+            Tensor of shape (n_classes, n_dim, n_dim).
 
         Returns
         -------
         torch.Tensor shape (n_classes, n_filters, n_filters)
             Covariances of the transformed features.
         """
-        transformed_covariances = conjugate_matrix(self.input_covariances, self.filters)
-        return transformed_covariances + self.diagonal_noise[None, :, :]
+        transformed_second_moments = conjugate_matrix(data_second_moments, self.filters)
+        return transformed_second_moments
+
+    def get_class_distances(self, data_second_moments, regularized=False):
+        """
+        Compute the pairwise distances between the feature second moments of the
+        different classes.
+
+        Parameters
+        ----------
+        data_second_moments : torch.Tensor
+            Tensor of shape (n_classes, n_dim, n_dim).
+        regularized : bool
+            If True, regularize the distances by adding a small value to the
+            diagonal of the transformed second_moments. Default is False.
+
+        Returns
+        -------
+        torch.Tensor shape (n_classes, n_classes)
+            Pairwise distances between the transformed feature second_moments.
+        """
+        transformed_second_moments = self.transform_second_moments(data_second_moments)
+
+        if regularized:
+            transformed_second_moments = transformed_second_moments + self.diagonal_noise[None, :, :]
+
+        distances = self.distance_fun(transformed_second_moments, transformed_second_moments)
+        return distances
 
     def transform(self, data_points):
         """
@@ -92,15 +133,15 @@ class SQFA(nn.Module):
         Returns
         -------
         torch.Tensor shape (n_samples, n_filters)
-            Data transformed to features.
+            Data transformed to feature space.
         """
         transformed_points = torch.einsum("ij,nj->ni", self.filters, data_points)
         return transformed_points
 
     def fit(
         self,
-        distance_fun=None,
-        max_epochs=10,
+        second_moments,
+        max_epochs=50,
         lr=0.1,
         pairwise=False,
         show_progress=True,
@@ -112,13 +153,9 @@ class SQFA(nn.Module):
 
         Parameters
         ----------
-        distance_fun : callable
-            Function to compute the distance between the transformed feature
-            covariances. Should take as input two tensors of shape
-            (n_classes, n_filters, n_filters) and return a matrix
-            of shape (n_classes, n_classes) with the pairwise distances
-            (or squared distances or similarities).
-            If None, then the Affine Invariant squared distance is used.
+        second_moments : torch.Tensor
+            Tensor of shape (n_classes, n_dim, n_dim) with the second moments
+            of the data for each class.
         max_epochs : int, optional
             Number of max training epochs. By default 50.
         lr : float
@@ -139,13 +176,10 @@ class SQFA(nn.Module):
         **kwargs
             Additional keyword arguments passed to the NAdam optimizer.
         """
-        if distance_fun is None:
-            distance_fun = affine_invariant_sq
-
         if not pairwise:
             loss, training_time = fitting_loop(
               model=self,
-              distance_fun=distance_fun,
+              second_moments=second_moments,
               max_epochs=max_epochs,
               lr=lr,
               show_progress=show_progress,
@@ -154,6 +188,7 @@ class SQFA(nn.Module):
             )
 
         else:
+            distance_fun_original = self.distance_fun
             n_pairs = self.filters.shape[0] // 2
 
             # Require n_pairs to be even
@@ -169,8 +204,8 @@ class SQFA(nn.Module):
                 # Make function to only evaluate distance on subset of filters
                 max_ind = min([2 * i + 2, self.filters.shape[0]])
                 inds_filters_used = torch.arange(max_ind)
-                distance_subset = _matrix_subset_distance_generator(
-                    subset_inds=inds_filters_used, distance_fun=distance_fun
+                self.distance_fun = _matrix_subset_distance_generator(
+                    subset_inds=inds_filters_used, distance_fun=distance_fun_original
                 )
 
                 # Fix the filters already trained
@@ -182,7 +217,7 @@ class SQFA(nn.Module):
                 # Train the current pair
                 loss_pair, training_time = fitting_loop(
                   model=self,
-                  distance_fun=distance_subset,
+                  second_moments=second_moments,
                   max_epochs=max_epochs,
                   lr=lr,
                   show_progress=show_progress,
@@ -195,6 +230,9 @@ class SQFA(nn.Module):
                 self._add_constraint(constraint=self.constraint)
                 loss = torch.cat((loss, loss_pair))
                 training_time = torch.cat((training_time, training_time))
+
+            # Reset distance function
+            self.distance_fun = distance_fun_original
 
         if return_loss:
             return loss, training_time
