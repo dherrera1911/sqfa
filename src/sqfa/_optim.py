@@ -16,7 +16,7 @@ def __dir__():
 def fitting_loop(
     model,
     distance_fun,
-    epochs=50,
+    max_epochs=50,
     lr=0.1,
     atol=1e-6,
     show_progress=True,
@@ -34,8 +34,8 @@ def fitting_loop(
         Function returning pairwise distances between covariance matrices.
         Takes as input two batches of covariance matrices of shape (batch_size, n_dim, n_dim)
         and return a tensor of shape (batch_size, batch_size).
-    epochs : int, optional
-        Number of training epochs. By default 30.
+    max_epochs : int, optional
+        Number of max training epochs. By default 50.
     lr : float, optional
         Learning rate, by default 0.1.
     atol : float, optional
@@ -60,6 +60,14 @@ def fitting_loop(
         **kwargs,
     )
 
+    def closure():
+        optimizer.zero_grad()
+        covariances = model.transform_second_moments()
+        distances = distance_fun(covariances, covariances)
+        epoch_loss = -torch.mean(distances[tril_ind[0], tril_ind[1]])
+        epoch_loss.backward()
+        return epoch_loss
+
     n_classes = model.input_covariances.shape[0]
     tril_ind = torch.tril_indices(n_classes, n_classes, offset=-1)
     loss_list = []
@@ -67,21 +75,14 @@ def fitting_loop(
     total_start_time = time.time()
 
     prev_loss = 0.0
-    loss_change = -1.0 # Arbitrary value to enter the loop
+    consecutive_stopping_criteria_met = 0
 
-    def closure():
-        optimizer.zero_grad()
-        covariances = model.get_feature_covariances()
-        distances = distance_fun(covariances, covariances)
-        epoch_loss = -torch.mean(distances[tril_ind[0], tril_ind[1]])
-        epoch_loss.backward()
-        return epoch_loss
-
-    for e in tqdm(range(epochs), desc="Epochs", unit="epoch", disable=not show_progress):
+    for e in tqdm(range(max_epochs), desc="Epochs", unit="epoch", disable=not show_progress):
 
         epoch_loss = optimizer.step(closure)
         epoch_time = time.time() - total_start_time
-        loss_change = prev_loss - epoch_loss.item()
+
+        loss_change = abs(prev_loss - epoch_loss.item())
 
         # Update tqdm bar description with loss change and total time
         #tqdm.write(
@@ -89,16 +90,25 @@ def fitting_loop(
         #    f"Change: {loss_change:.4f}, Time: {epoch_time:.2f}s"
         #)
 
-        # Break if loss change is below atol
-        if loss_change <= atol and loss_change >= 0:
-            tqdm.write(
-              f"Loss change below {atol}, stopping training at epoch {e+1}/{epochs}."
-            )
-            break
+        # Check if loss change is below atol
+        if loss_change < atol:
+            consecutive_stopping_criteria_met += 1
+        else:
+            consecutive_stopping_criteria_met = 0
 
         prev_loss = epoch_loss.item()
         training_time.append(epoch_time)
         loss_list.append(epoch_loss.item())
+
+        # Stop if loss change is below atol for 3 consecutive epochs
+        if consecutive_stopping_criteria_met >= 3:
+            tqdm.write(
+                f"Loss change below {atol} for 3 consecutive epochs. Stopping training at epoch {e + 1}/{max_epochs}."
+            )
+            break
+
+    else:  # Executes if no break occurs
+        print(f"Reached max_epochs ({max_epochs}) without meeting stopping criteria.")
 
     if return_loss:
         return torch.tensor(loss_list), torch.tensor(training_time)

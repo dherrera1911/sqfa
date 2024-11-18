@@ -68,7 +68,7 @@ class SQFA(nn.Module):
         self.constraint = constraint
         self._add_constraint(constraint=self.constraint)
 
-    def get_feature_covariances(self):
+    def transform_second_moments(self):
         """
         Transform input covariances to filter response covariances.
 
@@ -80,9 +80,9 @@ class SQFA(nn.Module):
         transformed_covariances = conjugate_matrix(self.input_covariances, self.filters)
         return transformed_covariances + self.diagonal_noise[None, :, :]
 
-    def forward(self, data_points):
+    def transform(self, data_points):
         """
-        Transform input data to features.
+        Transform data to feature space.
 
         Parameters
         ----------
@@ -100,7 +100,7 @@ class SQFA(nn.Module):
     def fit(
         self,
         distance_fun=None,
-        epochs=10,
+        max_epochs=10,
         lr=0.1,
         pairwise=False,
         show_progress=True,
@@ -119,8 +119,8 @@ class SQFA(nn.Module):
             of shape (n_classes, n_classes) with the pairwise distances
             (or squared distances or similarities).
             If None, then the Affine Invariant squared distance is used.
-        epochs : int
-            Number of epochs to train the model. Default is 100.
+        max_epochs : int, optional
+            Number of max training epochs. By default 50.
         lr : float
             Learning rate for the optimizer. Default is 0.1.
         decay_step : int
@@ -146,7 +146,7 @@ class SQFA(nn.Module):
             loss, training_time = fitting_loop(
               model=self,
               distance_fun=distance_fun,
-              epochs=epochs,
+              max_epochs=max_epochs,
               lr=lr,
               show_progress=show_progress,
               return_loss=True,
@@ -183,7 +183,7 @@ class SQFA(nn.Module):
                 loss_pair, training_time = fitting_loop(
                   model=self,
                   distance_fun=distance_subset,
-                  epochs=epochs,
+                  max_epochs=max_epochs,
                   lr=lr,
                   show_progress=show_progress,
                   return_loss=True,
