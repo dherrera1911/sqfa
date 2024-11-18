@@ -1,9 +1,9 @@
 # SQFA
 
-<img src="_static/sqfa.svg" width="500" height="200">
+<img src="_static/sqfa.svg" width="350" height="120">
 
 ```{include} ../../README.md
-:start-line: 4
+:start-line: 2
 ```
 
 ## Tutorials
