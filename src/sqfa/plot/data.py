@@ -64,8 +64,8 @@ def scatter_data(
         alpha=0.5,
     )
 
-    ax.set_xlabel(f"Response {dim_pair[0] + 1}")
-    ax.set_ylabel(f"Response {dim_pair[1] + 1}")
+    ax.set_xlabel(f"Dimension {dim_pair[0] + 1}")
+    ax.set_ylabel(f"Dimension {dim_pair[1] + 1}")
 
     if legend_type == 'continuous':
         color_map, norm = get_normalized_color_map(color_map, values)
