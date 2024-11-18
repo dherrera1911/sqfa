@@ -20,9 +20,9 @@ learning techniques.
 ## SQFA vs PCA in the 0-mean case
 
 To compare the methods, we will generate a toy problem with 3 classes over a 4
-dimensional space. The first two and the last two dimensions of the data space
-will vary in different ways, and we will test what dimensions are emphasized by
-SQFA vs PCA and Linear Discriminant Analysis (LDA).
+dimensional space. We will introduce different statistical properties across
+the first two and the last two dimensions of the data space, and we will test
+which dimensions are emphasized by SQFA vs PCA and Linear Discriminant Analysis (LDA).
 
 SQFA finds the features that maximize the difference in second-order statistics
 between the classes. PCA, on the other hand, finds the features that
@@ -33,11 +33,11 @@ statistics for 3 classes with the following properties:
   structure for all classes.
 - Dimensions 3 and 4 have lower variance, but the covariances are different
   for each class.
-- Dimensions 1 and 2 are uncorrelated to dimensions 3 and 4.
+- Dimensions 1 and 2 are uncorrelated with dimensions 3 and 4.
 - The means are 0 for all dimensions and classes.
 
-To achieve this, we will generate an initial covariance matrix, and we will
-progressively rotate the covariance matrix for dimensions 3 and 4 for each
+We implement the statistics above by having an initial covariance matrix, and
+progressively rotating the covariance of dimensions 3 and 4 for each
 class. Let's first define the function that makes the rotated covariance
 
 ```{code-cell} ipython3
@@ -53,7 +53,6 @@ def make_rotation_matrix(theta):
                                      [torch.sin(theta), torch.cos(theta)]])
     return rotation
 
-
 def make_rotated_classes(base_cov, angles):
     """Rotate the last 2 dimensions of base_cov by the angles in the angles list"""
     covs = torch.as_tensor([])
@@ -64,7 +63,7 @@ def make_rotated_classes(base_cov, angles):
     return covs
 ```
 
-Let's generate the covariance matrices and visualize them:
+Let's generate the covariance matrices:
 
 ```{code-cell} ipython3
 # Base diagonal covariance
@@ -73,36 +72,50 @@ base_cov = torch.diag(variances)
 
 angles = torch.as_tensor([15, 45, 70])
 class_covariances = make_rotated_classes(base_cov, angles)
+```
 
-# Plot the covariances
-fig, ax = plt.subplots(1, 2, figsize=(7, 3.5))
-sqfa.plot.statistics_ellipses(ellipses=class_covariances, dim_pair=(0, 1), ax=ax[0])
-sqfa.plot.statistics_ellipses(ellipses=class_covariances, dim_pair=(2, 3),
-                              ax=ax[1], legend_type='discrete')
-# Add title to the plot
-ax[0].set_title('Class statistics for dimensions 1 and 2')
-ax[1].set_title('Class statistics for dimensions 3 and 4')
+And let's now make a function to visualize our 4D covariances:
+
+```{code-cell} ipython3
+def plot_data_covariances(ax, covariances, means=None):
+    """Plot the covariances as ellipses."""
+    if means is None:
+        means = torch.zeros(covariances.shape[0], covariances.shape[1])
+
+    dim_pairs = [[0, 1], [2, 3]]
+    legend_type = ['none', 'discrete']
+    for i in range(2):
+        # Plot ellipses 
+        sqfa.plot.statistics_ellipses(ellipses=covariances, centers=means,
+                                      dim_pair=dim_pairs[i], ax=ax[i],
+                                      legend_type=legend_type[i])
+        # Plot points for the means
+        sqfa.plot.scatter_data(data=means, labels=torch.arange(3),
+                               dim_pair=dim_pairs[i], ax=ax[i])
+        dim_pairs_label = [d+1 for d in dim_pairs[i]]
+        ax[i].set_title(f'Data statistics: dim {dim_pairs_label}')
+        ax[i].set_aspect('equal')
+
+figsize = (7, 3.5)
+fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True)
+plot_data_covariances(ax, class_covariances)
 plt.tight_layout()
 plt.show()
 ```
 
-The first plot shows the covariance for dimensions 1 and 2, which is the same
-for all classes. The second plot shows how the covariance for dimensions 3 and 4
-rotates for each class.
+The left panel shows how dimensions 1 and 2 have the same covariance for all
+classes, and the right panel shows how dimensions 3 and 4 have different
+covariances for each class.
 
-Let's learn 2 features using SQFA and PCA for this problem. To
+Let's learn 2 features using PCA and SQFA for this problem. To
 obtain the PCA features we average the covariance matrices across classes
 to obtain the dataset covariance
 and [compute its eigenvectors.](https://sebastianraschka.com/Articles/2015_pca_in_3_steps.html#covariance-matrix)
 
 ```{code-cell} ipython
 # Learn SQFA filters
-model = sqfa.model.SQFA(
-  input_covariances=class_covariances,
-  feature_noise=0.001,
-  n_filters=2
-)
-model.fit(show_progress=False)
+model = sqfa.model.SQFA(n_dim=4, n_filters=2, feature_noise=0.001)
+model.fit(data_scatters=class_covariances, show_progress=False)
 sqfa_filters = model.filters.detach()
 
 # Learn PCA filters
@@ -111,36 +124,50 @@ eigval, eigvec = torch.linalg.eigh(average_cov)
 pca_filters = eigvec[:, -2:].T
 ```
 
-Let's plot the filters learned by SQFA and PCA:
+Let's visualize the filters learned by SQFA and PCA. We plot the filters
+as arrows in the original data space, onto which the data is projected.
 
 ```{code-cell} ipython
-# Plot the filters
-fig, ax = plt.subplots(1, 2, figsize=(8, 3))
-x = torch.arange(4) + 1
-for f in range(2):
-    ax[0].plot(x, sqfa_filters[f])
-    ax[1].plot(x, pca_filters[f])
-ax[0].set_title('SQFA filters')
-ax[1].set_title('PCA filters')
-ax[0].set_xlabel('Dimension')
-ax[1].set_xlabel('Dimension')
-ax[0].set_ylabel('Weight')
-ax[0].set_xticks(torch.arange(1, 5))
-ax[1].set_xticks(torch.arange(1, 5))
-# Leave only the integer ticks, with simple code
+# Function to plot filters
+def plot_filters(ax, filters):
+    """Plot the filters as arrows in data space."""
+    # Draw the filters of sqfa as arrows on the plot
+    colors = ['r', 'b']
+    awidth = 0.02
+    for f in range(2):
+        ax[0].arrow(0, 0, filters[f, 0], filters[f, 1], width=awidth,
+                    head_width=awidth*5, label=f'Filter {f}', color=colors[f])
+        ax[1].arrow(0, 0, filters[f, 2], filters[f, 3], width=awidth,
+                    head_width=awidth*5, label=f'Filter {f}', color=colors[f])
+    # Add legend outside of the plot, to the right
+    ax[1].legend(loc='upper left', bbox_to_anchor=(1, 1))
+
+# Plot PCA filters
+fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True)
+plot_data_covariances(ax, class_covariances)
+plot_filters(ax, pca_filters)
+plt.suptitle('PCA filters', fontsize=16)
+plt.tight_layout()
+plt.show()
+
+# Plot SQFA filters
+fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True)
+plot_data_covariances(ax, class_covariances)
+plot_filters(ax, sqfa_filters)
+plt.suptitle('SQFA filters', fontsize=16)
 plt.tight_layout()
 plt.show()
 ```
 
-We see that the filters learned by SQFA put more weight on the dimensions
-with differences in covariances, while PCA puts more weight on the dimensions
-with higher variance. Let's next compute and plot the statistics of both
-types of features.
+While PCA filters put all their weight into the dimensions
+with higher variance (1 and 2), SQFA filters put all their weight
+into the dimensions with differences in covariances (3 and 4).
+Let's next visualize the statistics of the features learned by both methods.
 
 ```{code-cell} ipython
-# Get statistics and plot
-sqfa_covariances = torch.einsum('ij,njk,kl->nil', sqfa_filters, class_covariances, sqfa_filters.T)
+# Get feature statistics
 pca_covariances = torch.einsum('ij,njk,kl->nil', pca_filters, class_covariances, pca_filters.T)
+sqfa_covariances = torch.einsum('ij,njk,kl->nil', sqfa_filters, class_covariances, sqfa_filters.T)
 
 kwargs = {
     'bbox_to_anchor': (1.05, 1),
@@ -149,20 +176,21 @@ kwargs = {
     'title': 'Class',
 } # Legend arguments
 
-fig, ax = plt.subplots(1, 2, figsize=(7, 3.5))
-sqfa.plot.statistics_ellipses(ellipses=sqfa_covariances, ax=ax[0])
-sqfa.plot.statistics_ellipses(ellipses=pca_covariances, ax=ax[1], legend_type='discrete', **kwargs)
-ax[0].set_title('SQFA feature statistics')
-ax[1].set_title('PCA feature statistics')
+fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True)
+sqfa.plot.statistics_ellipses(ellipses=pca_covariances, ax=ax[0])
+sqfa.plot.statistics_ellipses(ellipses=sqfa_covariances, ax=ax[1], legend_type='discrete', **kwargs)
+ax[0].set_title('PCA feature statistics')
+ax[1].set_title('SQFA feature statistics')
 ax[0].set_xlabel('Feature 1')
 ax[0].set_xlabel('Feature 2')
 ax[1].set_xlabel('Feature 1')
 ax[1].set_xlabel('Feature 2')
+plt.tight_layout()
 plt.show()
 ```
 
-We see that while the SQFA features maintain the differences in covariances between
-classes, PCA features miss this information. With the use of an appropriate
+We see that while PCA features miss the differences in covariances between classes
+(left), SQFA features capture these differences (right). With the use of an appropriate
 classifier, SQFA features should be able to separate the classes better than PCA.
 
 
@@ -178,34 +206,20 @@ in the first two dimensions and visualize the new distributions.
 
 ```{code-cell} ipython
 # Do example with difference in means
-class_means = torch.tensor([[1, 0, 0, 0],
+class_means = torch.tensor([[1, -1, 0, 0],
                             [0, 1, 0, 0],
-                            [-1, 0, 0, 0]])
+                            [-1, -1, 0, 0]])
 class_means = class_means * 0.4
 
 # Plot the new distributions
-dim_pairs = [(0, 1), (2, 3)]
-
-fig, ax = plt.subplots(1, 2, figsize=(7, 3.5))
-for i, dim_pair in enumerate(dim_pairs):
-    sqfa.plot.statistics_ellipses(ellipses=class_covariances,
-                                  centers=class_means,
-                                  dim_pair=dim_pair,
-                                  ax=ax[i])
-    sqfa.plot.scatter_data(data=class_means,
-                           labels=torch.arange(3),
-                           dim_pair=dim_pair,
-                           ax=ax[i])
-    ax[i].set_xlabel(f'Dimension {dim_pair[0]+1}')
-    ax[i].set_ylabel(f'Dimension {dim_pair[1]+1}')
-ax[0].set_title('Class statistics for dimensions 1 and 2')
-ax[1].set_title('Class statistics for dimensions 3 and 4')
+fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True)
+plot_data_covariances(ax, class_covariances, class_means)
 plt.tight_layout()
 plt.show()
 ```
 
-We can see that the means of the classes are different in the first two dimensions.
-Let's learn the filters with SQFA and LDA now and compare the results. First, we
+Now the means of the classes are different in the first two dimensions.
+Let's learn the filters with LDA and SQFA now and compare the results. First, we
 define a function to learn the LDA filters using
 [generalized eigenvectors](https://en.wikipedia.org/wiki/Linear_discriminant_analysis#Multiclass_LDA).
 
@@ -237,45 +251,42 @@ second_moments = class_covariances + mean_outer_prod
 lda_filters = lda(scatter_between, scatter_within)
 
 # Learn SQFA
-model = sqfa.model.SQFA(
-  input_covariances=second_moments,
-  feature_noise=0.001,
-  n_filters=2
-)
-model.fit(show_progress=False)
+model = sqfa.model.SQFA(n_dim=4, feature_noise=0.001, n_filters=2)
+model.fit(data_scatters=second_moments, show_progress=False)
 sqfa_filters = model.filters.detach()
 ```
 
-Like in the previous example, we plot the filters learned by SQFA and LDA:
+Like in the previous example, we plot the filters learned by LDA and SQFA:
 
 ```{code-cell} ipython
-# Plot the filters
-fig, ax = plt.subplots(1, 2, figsize=(8, 3))
-x = torch.arange(4) + 1
-for f in range(2):
-    ax[0].plot(x, sqfa_filters[f])
-    ax[1].plot(x, lda_filters[f])
-ax[0].set_title('SQFA filters')
-ax[1].set_title('LDA filters')
-ax[0].set_xlabel('Dimension')
-ax[1].set_xlabel('Dimension')
-ax[0].set_ylabel('Weight')
-ax[0].set_xticks(torch.arange(1, 5))
-ax[1].set_xticks(torch.arange(1, 5))
+# Plot LDA filters
+fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True)
+plot_data_covariances(ax, class_covariances, class_means)
+plot_filters(ax, lda_filters)
+plt.suptitle('LDA filters', fontsize=16)
+plt.tight_layout()
+plt.show()
+
+# Plot SQFA filters
+fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True)
+plot_data_covariances(ax, class_covariances, class_means)
+plot_filters(ax, sqfa_filters)
+plt.suptitle('SQFA filters', fontsize=16)
 plt.tight_layout()
 plt.show()
 ```
 
-We see that, as expected, LDA puts more weight on the dimensions with differences
-in the means, while SQFA puts more weight on the dimensions with differences in
-the covariances. Let's plot the statistics of the features learned by both methods.
+As expected, LDA filters have all their weight on the dimensions with differences
+in class means (dimensions 1,2), while SQFA filters have their weight on the
+dimensions with differences in the covariances (dimensions 3,4). Let's plot the
+statistics of the features learned by both methods.
 
 ```{code-cell} ipython
 # Get the means and covariances for the new features
-sqfa_covariances = torch.einsum('ij,njk,kl->nil', sqfa_filters, class_covariances, sqfa_filters.T)
 lda_covariances = torch.einsum('ij,njk,kl->nil', lda_filters, class_covariances, lda_filters.T)
-sqfa_means = class_means @ sqfa_filters.T
 lda_means = class_means @ lda_filters.T
+sqfa_covariances = torch.einsum('ij,njk,kl->nil', sqfa_filters, class_covariances, sqfa_filters.T)
+sqfa_means = class_means @ sqfa_filters.T
 
 kwargs = {
     'bbox_to_anchor': (1.05, 1),
@@ -284,35 +295,37 @@ kwargs = {
     'title': 'Class',
 } # Legend arguments
 
-fig, ax = plt.subplots(1, 2, figsize=(7, 3.5))
+fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True)
 
-# SQFA statistics
-sqfa.plot.statistics_ellipses(ellipses=sqfa_covariances,
-                              centers=sqfa_means, ax=ax[0])
-sqfa.plot.scatter_data(data=sqfa_means, labels=torch.arange(3), ax=ax[0])
 # LDA statistics
 sqfa.plot.statistics_ellipses(ellipses=lda_covariances, centers=lda_means,
-                              ax=ax[1], legend_type='discrete', **kwargs)
-sqfa.plot.scatter_data(data=lda_means, labels=torch.arange(3), ax=ax[1])
+                              ax=ax[0])
+sqfa.plot.scatter_data(data=lda_means, labels=torch.arange(3), ax=ax[0])
 
-ax[0].set_title('SQFA feature statistics')
-ax[1].set_title('LDA feature statistics')
+# SQFA statistics
+sqfa.plot.statistics_ellipses(ellipses=sqfa_covariances, centers=sqfa_means,
+                              ax=ax[1], legend_type='discrete', **kwargs)
+sqfa.plot.scatter_data(data=sqfa_means, labels=torch.arange(3), ax=ax[1])
+
+ax[0].set_title('LDA feature statistics')
+ax[1].set_title('SQFA feature statistics')
 ax[0].set_xlabel('Feature 1')
 ax[0].set_ylabel('Feature 2')
 ax[1].set_xlabel('Feature 1')
 ax[1].set_ylabel('Feature 2')
+plt.tight_layout()
 plt.show()
 ```
 
 We see that the distribution of LDA features have different means, while
 the distribution of SQFA features have the same means but different covariances.
 Which features are better for classification will depend on the specifics of
-the class distributions, as well as the classifier used.
+the class distributions and on the classifier used.
 
 
 ## SQFA is sensible to covariances and means
 
-In the previous example we showed that SQFA prioritized the differences in
+In the previous example we saw that SQFA prioritized the differences in
 covariances over the differences in means. However, this is not always the case.
 Particularly, note that we fitted SQFA using the second moment matrices of the
 classes, which for a given class $i$ are given
@@ -324,33 +337,20 @@ in the means between the first two dimensions. Let's make the class means
 more different and plot the new distributions.
 
 ```{code-cell} ipython
-class_means = torch.tensor([[1, 0, 0, 0],
+# Make example with more different means
+class_means = torch.tensor([[1, -1, 0, 0],
                             [0, 1, 0, 0],
-                            [-1, 0, 0, 0]])
-class_means = class_means * 5.0
+                            [-1, -1, 0, 0]])
+class_means = class_means * 4.0
 
 # Plot the new distributions
-dim_pairs = [(0, 1), (2, 3)]
-
-fig, ax = plt.subplots(1, 2, figsize=(8, 4))
-for i, dim_pair in enumerate(dim_pairs):
-    sqfa.plot.statistics_ellipses(ellipses=class_covariances,
-                                  centers=class_means,
-                                  dim_pair=dim_pair,
-                                  ax=ax[i])
-    sqfa.plot.scatter_data(data=class_means,
-                           labels=torch.arange(3),
-                           dim_pair=dim_pair,
-                           ax=ax[i])
-    ax[i].set_xlabel(f'Dimension {dim_pair[0]+1}')
-    ax[i].set_ylabel(f'Dimension {dim_pair[1]+1}')
-ax[0].set_title('Class statistics for dimensions 1 and 2')
-ax[1].set_title('Class statistics for dimensions 3 and 4')
+fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True)
+plot_data_covariances(ax, class_covariances, class_means)
 plt.tight_layout()
 plt.show()
 ```
 
-Let's recompute the second moments and learn the filters with SQFA again.
+Let's learn the SQFA filters again and visualize them:
 
 ```{code-cell} ipython
 # Get the new second moment matrices
@@ -358,47 +358,42 @@ mean_outer_prod = torch.einsum('ij,ik->ijk', class_means, class_means)
 second_moments = class_covariances + mean_outer_prod
 
 # Learn SQFA
-model = sqfa.model.SQFA(
-  input_covariances=second_moments,
-  feature_noise=0.001,
-  n_filters=2
-)
-model.fit(show_progress=False)
+model = sqfa.model.SQFA(n_dim=4, feature_noise=0.001, n_filters=2)
+model.fit(data_scatters=second_moments, show_progress=False)
 sqfa_filters = model.filters.detach()
+
+# Plot SQFA filters
+fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True)
+plot_data_covariances(ax, class_covariances, class_means)
+plot_filters(ax, sqfa_filters*3) # Make arrows longer for better visualization
+plt.suptitle('SQFA filters', fontsize=16)
+plt.tight_layout()
+plt.show()
 ```
 
-Let's plot the filters learned by SQFA and the statistics of the features.
+The filters learned by SQFA put more weight on the dimensions
+with differences in the means now, unlike the previous example.
+Let's plot the statistics of the SQFA features for this new example:
 
 ```{code-cell} ipython
-fig, ax = plt.subplots(1, 2, figsize=(8, 4))
-
-# Plot the filters
-x = torch.arange(4) + 1
-for f in range(2):
-    ax[0].plot(x, sqfa_filters[f])
-ax[0].set_title('SQFA filters')
-ax[0].set_xlabel('Dimension')
-ax[0].set_ylabel('Weight')
-ax[0].set_xticks(torch.arange(1, 5))
-
 # Get the means and covariances for the new features
 sqfa_covariances = torch.einsum('ij,njk,kl->nil', sqfa_filters, class_covariances, sqfa_filters.T)
 sqfa_means = class_means @ sqfa_filters.T
 
-# Plot the statistics
+# Plot the new features
+fig, ax = plt.subplots(1, 1, figsize=(4, 4), sharex=True, sharey=True)
 sqfa.plot.statistics_ellipses(ellipses=sqfa_covariances,
-                              centers=sqfa_means, ax=ax[1])
-sqfa.plot.scatter_data(data=sqfa_means, labels=torch.arange(3), ax=ax[1])
-ax[1].set_title('SQFA feature statistics')
-ax[1].set_xlabel('Feature 1')
-ax[1].set_ylabel('Feature 2')
+                              centers=sqfa_means, ax=ax)
+sqfa.plot.scatter_data(data=sqfa_means, labels=torch.arange(3), ax=ax)
+ax.set_title('SQFA features')
+ax.set_xlabel('Feature 1')
+ax.set_ylabel('Feature 2')
+ax.set_aspect('equal')
 plt.tight_layout()
 plt.show()
 ```
   
-We see that now the filters learned by SQFA put more weight on the dimensions
-with differences in the means, and that this is reflected in the
-feature statistics. This example illustrates that SQFA is sensitive to both
+This example illustrates that SQFA is sensitive to both
 the covariances and the means of the classes, and that the features learned
 will depend on the specifics of the class distributions. Note that this is
 the case if we use the second moment matrices as input to SQFA. If we use
@@ -407,8 +402,7 @@ in the covariances between classes.
 
 ## Conclusion
 
-SQFA is a feature learning technique that is sensitive to the differences in
-second moments between classes. It learns different features than other
-standard techniques like PCA and LDA, and can be particularly useful when
-the differences in covariances between classes are important for classification.
-
+SQFA learns features that maximize the differences in the second moment differences
+between classes. These features are different than those learned by other
+standard techniques like PCA and LDA. SQFA is particularly useful when the
+differences in covariances between classes are important for classification.
