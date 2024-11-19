@@ -190,19 +190,24 @@ def class_statistics(points, labels):
         Dictionary containing the mean, covariance and second moment matrix
         of each class.
     """
+    dtype = points.dtype
     n_classes = int(torch.max(labels) + 1)
     n_dim = points.shape[-1]
-    means = torch.zeros(n_classes, n_dim)
-    covariances = torch.zeros(n_classes, n_dim, n_dim)
-    second_moments = torch.zeros(n_classes, n_dim, n_dim)
+
+    means = torch.zeros(n_classes, n_dim, dtype=dtype)
+    covariances = torch.zeros(n_classes, n_dim, n_dim, dtype=dtype)
+    second_moments = torch.zeros(n_classes, n_dim, n_dim, dtype=dtype)
+
     for i in range(n_classes):
         indices = (labels == i).nonzero().squeeze(1)
         class_points = points[indices]
-        n_points = class_points.shape[0]
+        n_points = torch.tensor(class_points.shape[0], dtype=dtype)
+
         means[i] = torch.mean(class_points, dim=0)
         second_moments[i] = torch.einsum("ij,jk->ik", class_points.T, class_points) / n_points
         covariances[i] = (second_moments[i] - torch.einsum("i,j->ij", means[i], means[i])) \
             * n_points / (n_points - 1)
+
     statistics_dict = {
         "means": means,
         "covariances": covariances,
