@@ -85,7 +85,7 @@ separated. The classical example is
 class means while minimizing the within-class variance in the transformed
 dataset $\{Z_t, y_t\}_{t=1}^N$. Thus, LDA maximizes the first-order differences
 between classes, by maximizing the Euclidean distances between the class means
-$\mu_i = \mathbb{E}[Z | y=i]$, which live in an Euclidean vector space.
+$\mu_i = \mathbb{E}[Z | y=i]$ which live in an Euclidean vector space.
 
 First-order differences are the simplest to optimize for, but in real-world
 data they may not capture all relevant differences between classes.
