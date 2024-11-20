@@ -11,7 +11,7 @@ kernelspec:
   name: python3
 ---
 
-# SQFA vs PCA and LDA - Toy Problem
+# Feature selection: SQFA vs PCA and LDA
 
 In this tutorial we build a simple toy problem to illustrate the types of features
 that are learnt by SQFA, and how they compare to other standard feature
