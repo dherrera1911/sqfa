@@ -133,7 +133,15 @@ in the feature space given by $F$.
   <b>Manifold distance and discriminability.</b>
   <i>The idea behind SQFA is that the larger the Riemannian distance
   between the second moment matrices of the classes, the more different their
-  second-order statistics, and the more discriminable they are.</i>
+  second-order statistics, and the more discriminable they are. This idea is
+  illustrated in the cartoon, which shows a baseline second-moment matrix as a
+  point in the SPD manifold (grey star), and two trajectories in the manifold
+  getting away from this baseline (red and blue stars). To the right, the
+  ellipses corresponding to each second-moment matrix are shown. We see that
+  as we go farther from the baseline in the manifold, the distribution second moments
+  become more different from the baseline second moments. In the red trajectory
+  distributions become more different by rotating, and in the blue trajectory
+  by shrinking.</i>
   </figcaption>
 </p>
 </figure>
@@ -142,6 +150,28 @@ With this in mind, SQFA uses as an objective function the pairwise Riemannian di
 (or squared distances) between the second moment matrices $\Psi_i$ of all classes, 
 $U\left(\left\{\Psi_i\right\}_{i=1}^{i=q}\right) = \sum_{i=2}^{q}\sum_{j=1}^{i-1} d(\Psi_i,\Psi_j)$
 and it tries to maximize this objective.
+
+:::{admonition} SQFA input types: Raw data vs statistics and second-moments vs covariances
+The discussion in this tutorial takes us from raw data points $\{X_t, y_t\}$
+to the second moments of the features $\{\Psi_i\}_{i=1}^q$. However,
+for linear features, probability theory tells us that we only
+need the second-moments of the data to compute the second moments of the
+features. If $\Sigma_i = \mathbb{E}[X_t X_t^T | y=i]$ is the second moment
+of $X$ for class $i$, then the second moment of the features is
+$\Psi_i = F^T \Sigma_i F$. Thus, SQFA can take as input either the raw data
+points $\{X_t, y_t\}$ or the second moments $\{\Sigma_i\}_{i=1}^q$,
+as seen in other tutorials. This can be particularly useful for cases
+where we have access to the second moments but not to the raw data.
+
+Another point to note is that the discussion focuses around
+the non-centered second moments $\mathbb{E}[ZZ^T | y=i]$,
+but SQFA would be equally applicable to the covariance matrices
+$\mathbb{E}[(Z-\mu_i)(Z-\mu_i)^T | y=i]$. The non-centered
+second moment matrices more directly relate to quadratic discriminability
+by the linear features, but applying SQFA to the covariance matrices
+could be useful in some contexts. The user can pass either the second moments
+or the covariance matrices as inputs to learn SQFA filters.
+:::
 
 
 ## Riemannian metrics relate to discriminability
@@ -171,4 +201,5 @@ to learn discriminative features by that maximizing the distances between
 the second-order statistics of the classes in $\mathcal{S}^n_{++}$.
 In the next tutorials we will learn how to use the `sqfa` package,
 and how the features learned by SQFA compare to other methods.
+
 
