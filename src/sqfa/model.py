@@ -8,7 +8,7 @@ from torch.nn.utils.parametrize import register_parametrization, remove_parametr
 from ._optim import fitting_loop
 from .constraints import FixedFilters, Identity, Sphere
 from .distances import _matrix_subset_distance_generator, affine_invariant_sq
-from .linalg_utils import conjugate_matrix, class_statistics
+from .linalg import conjugate_matrix, class_statistics
 
 __all__ = ["SQFA"]
 

@@ -17,12 +17,13 @@ caption: Introduction
 self
 tutorials/spd_geometry.md
 tutorials/toy_problem.md
+tutorials/face_processing.md
 ```
 
 
 ```{toctree}
 ---
-maxdepth: 2
+maxdepth: 1
 caption: API Reference
 ---
 api.md

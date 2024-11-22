@@ -226,7 +226,7 @@ define a function to learn the LDA filters using
 ```{code-cell} ipython
 def lda(scatter_between, scatter_within):
     """Compute LDA filters from between class and within class scatter matrices."""
-    eigvec, eigval = sqfa.linalg_utils.generalized_eigenvectors(
+    eigvec, eigval = sqfa.linalg.generalized_eigenvectors(
       scatter_between,
       scatter_within
     )

@@ -1,4 +1,4 @@
-"""Tests for the linalg_utils module."""
+"""Tests for the linalg module."""
 
 import numpy as np
 import pytest
@@ -6,7 +6,7 @@ import scipy.linalg
 import torch
 
 from make_examples import sample_spd
-from sqfa.linalg_utils import (
+from sqfa.linalg import (
     conjugate_matrix,
     conjugate_to_identity,
     generalized_eigenvalues,

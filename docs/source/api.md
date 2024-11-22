@@ -4,7 +4,7 @@
     :recursive:
 
     sqfa.distances
-    sqfa.linalg_utils
+    sqfa.linalg
     sqfa.plot
 ```
 

@@ -2,7 +2,7 @@
 
 import torch
 
-from .linalg_utils import (
+from .linalg import (
     generalized_eigenvalues,
     spd_log,
 )
