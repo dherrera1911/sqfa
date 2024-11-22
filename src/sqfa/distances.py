@@ -7,12 +7,13 @@ from .linalg_utils import (
     spd_log,
 )
 
-__all__ = ["affine_invariant_sq", "affine_invariant", "log_euclidean_sq"]
+__all__ = ["affine_invariant_sq", "affine_invariant", "log_euclidean_sq", "log_euclidean"]
 
 
 def __dir__():
     return __all__
 
+EPSILON = 1e-6 # Value added inside of square roots
 
 def affine_invariant_sq(A, B):
     """
@@ -40,6 +41,8 @@ def affine_invariant_sq(A, B):
 def affine_invariant(A, B):
     """
     Compute the affine invariant distance between SPD matrices.
+    A small epsilon is added inside the square root to avoid gradient
+    instabilities.
 
     Parameters
     ----------
@@ -53,7 +56,7 @@ def affine_invariant(A, B):
     distance : torch.Tensor
         Shape (n_batch_A, n_batch_B), the affine invariant distance.
     """
-    return torch.sqrt(affine_invariant_sq(A, B))
+    return torch.sqrt(affine_invariant_sq(A, B) + EPSILON)
 
 
 def log_euclidean_sq(A, B):
@@ -86,6 +89,8 @@ def log_euclidean_sq(A, B):
 def log_euclidean(A, B):
     """
     Compute the log-Euclidean distance between SPD matrices.
+    A small epsilon is added inside the square root to avoid gradient
+    instabilities.
 
     Parameters
     ----------
@@ -99,7 +104,7 @@ def log_euclidean(A, B):
     distance : torch.Tensor
         Shape (n_batch_A, n_batch_B), the log-Euclidean distance.
     """
-    return torch.sqrt(log_euclidean_sq(A, B))
+    return torch.sqrt(log_euclidean_sq(A, B) + EPSILON)
 
 
 def _matrix_subset_distance_generator(subset_inds, distance_fun):
