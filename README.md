@@ -21,7 +21,7 @@ import torchvision
 
 ### Download dataset
 
-trainset = torchvision.datasets.FashionMNIST(
+trainset = torchvision.datasets.MNIST(
     root="./data", train=True, download=True
 )
 x = trainset.data.reshape(-1, 28 * 28).float()
@@ -43,7 +43,7 @@ model = sqfa.model.SQFA(
 model.fit(X=x, y=y)
 
 # 2) Give scatter matrices as input
-data_stats = sqfa.linalg_utils.class_statistics(x, y)
+data_stats = sqfa.linalg.class_statistics(x, y)
 model.fit(data_scatters=data_stats["second_moments"])
 
 ### Transform data to the learned feature space
