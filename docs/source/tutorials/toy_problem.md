@@ -311,7 +311,9 @@ In the previous example SQFA prioritized the differences in
 covariances over the differences in means. However, this is not always the case.
 Particularly, note that we fitted SQFA using the second moment matrices of the
 classes, which for a given class $i$ are given
-by $\Psi_i = \Sigma_i + \mu_i \mu_i^T$. Thus, the second moments of a class will
+by $\Psi_i = \Sigma_i + \mu_i \mu_i^T$
+(see [this note](#centered-vs-non-centered) about centered vs non-centered second moments).
+Thus, the second moments of a class will
 be influenced by both the covariance matrix and the mean of the class.
 
 We can see this by modifying the toy example above to have larger differences
