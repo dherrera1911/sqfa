@@ -13,9 +13,9 @@ kernelspec:
 
 # Feature selection: SQFA vs PCA and LDA
 
-In this tutorial we consider a toy problem to illustrate the types of features
-that are learned by SQFA, and how they compare to other standard feature
-learning techniques.
+In this tutorial we consider a toy problem to compare SQFA to other standard
+feature learning techniques, Principal Component Analysis (PCA) and Linear
+DiscrimiAnalysis (LDA).
 
 ## SQFA vs PCA: The 0-mean case
 
