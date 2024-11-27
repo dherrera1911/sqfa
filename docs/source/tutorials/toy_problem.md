@@ -41,6 +41,8 @@ import torch
 import sqfa
 import matplotlib.pyplot as plt
 
+torch.manual_seed(9) # Set seed for reproducibility
+
 # GENERATE COVARIANCES
 
 # Define the functions to generate the covariance matrices
@@ -105,7 +107,7 @@ distributions.[^1]
 
 ```{code-cell} ipython
 # Learn SQFA filters
-model = sqfa.model.SQFA(n_dim=4, n_filters=2, feature_noise=0.001)
+model = sqfa.model.SQFA(n_dim=4, n_filters=2, feature_noise=0.01)
 model.fit(data_scatters=class_covariances, show_progress=False)
 sqfa_filters = model.filters.detach()
 
@@ -139,7 +141,7 @@ def plot_filters(ax, filters, class_covariances, means=None):
 fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True) 
 plot_filters(ax, sqfa_filters, class_covariances)
 ax[1].legend(bbox_to_anchor=(1.05, 1), loc='center left')
-plt.suptitle('SQFA filters', fontsize=16, x=0.4)
+plt.suptitle('SQFA filters', fontsize=16, x=0.42)
 plt.tight_layout()
 plt.show()
 
@@ -147,7 +149,7 @@ plt.show()
 fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True) 
 plot_filters(ax, pca_filters, class_covariances)
 ax[1].legend(bbox_to_anchor=(1.05, 1), loc='center left')
-plt.suptitle('PCA filters', fontsize=16, x=0.4)
+plt.suptitle('PCA filters', fontsize=16, x=0.42)
 plt.tight_layout()
 plt.show()
 ```
@@ -227,7 +229,7 @@ mean_outer_prod = torch.einsum('ij,ik->ijk', class_means, class_means)
 second_moments = class_covariances + mean_outer_prod
 
 # Learn SQFA
-model = sqfa.model.SQFA(n_dim=4, feature_noise=0.001, n_filters=2)
+model = sqfa.model.SQFA(n_dim=4, feature_noise=0.01, n_filters=2)
 model.fit(data_scatters=second_moments, show_progress=False)
 sqfa_filters = model.filters.detach()
 
@@ -243,7 +245,7 @@ space, like in the previous example:
 fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True) 
 plot_filters(ax, sqfa_filters, class_covariances, class_means)
 ax[1].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.suptitle('SQFA filters', fontsize=16, x=0.55)
+plt.suptitle('SQFA filters', fontsize=16, x=0.42)
 plt.tight_layout()
 plt.show()
 
@@ -251,10 +253,18 @@ plt.show()
 fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True) 
 plot_filters(ax, lda_filters, class_covariances, class_means)
 ax[1].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.suptitle('LDA filters', fontsize=16, x=0.55)
+plt.suptitle('LDA filters', fontsize=16, x=0.42)
 plt.tight_layout()
 plt.show()
 ```
+
+:::{admonition} Loss is invariant to filter sign
+The reader may note that the SQFA filters are different in
+the first and second example, i.e. Filter 1 changed
+sign. The loss function of SQFA is invariant to the sign and
+the order of the filters, which we would expect since these
+should not affect the second moment differences between classes.
+:::
 
 We see that while SQFA filters have their weight on the
 dimensions with differences in the covariances (dimensions 1,2)
@@ -313,7 +323,7 @@ more different and plot the new distributions.
 class_means = torch.tensor([[0, 0, 1, -1],
                             [0, 0, 0, 1],
                             [0, 0, -1, -1]])
-class_means = class_means * 3.0
+class_means = class_means * 2.5
 
 # Plot the new distributions
 fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True)
@@ -330,7 +340,7 @@ mean_outer_prod = torch.einsum('ij,ik->ijk', class_means, class_means)
 second_moments = class_covariances + mean_outer_prod
 
 # Learn SQFA
-model = sqfa.model.SQFA(n_dim=4, feature_noise=0.001, n_filters=2)
+model = sqfa.model.SQFA(n_dim=4, feature_noise=0.01, n_filters=2)
 model.fit(data_scatters=second_moments, show_progress=False)
 sqfa_filters = model.filters.detach()
 
@@ -342,7 +352,7 @@ fm = 3 # filter magnification for visualization
 fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True) 
 plot_filters(ax, sqfa_filters * fm, class_covariances, class_means)
 ax[1].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.suptitle('SQFA filters', fontsize=16, x=0.55)
+plt.suptitle('SQFA filters', fontsize=16, x=0.42)
 plt.tight_layout()
 plt.show()
 
@@ -350,7 +360,7 @@ plt.show()
 fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True) 
 plot_filters(ax, lda_filters * fm, class_covariances, class_means)
 ax[1].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-plt.suptitle('LDA filters', fontsize=16, x=0.55)
+plt.suptitle('LDA filters', fontsize=16, x=0.42)
 plt.tight_layout()
 plt.show()
 ```
