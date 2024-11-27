@@ -17,7 +17,7 @@ caption: Introduction
 self
 tutorials/spd_geometry.md
 tutorials/toy_problem.md
-tutorials/face_processing.md
+tutorials/digit_processing.md
 ```
 
 
