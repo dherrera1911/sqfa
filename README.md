@@ -1,7 +1,8 @@
 # SQFA
 
-Supervised Quadratic Feature Analysis (SQFA) is a linear supervised dimensionality
-reduction technique maximizing the differences in second-order statistics between
+Supervised Quadratic Feature Analysis (SQFA) is a supervised dimensionality
+reduction technique. It learns a set of linear features that
+maximize the differences in second-order statistics between
 classes. The `sqfa` package provides an implementation of the SQFA algorithm in PyTorch.
 
 SQFA uses a geometric loss on the class-specific second moment matrices,
