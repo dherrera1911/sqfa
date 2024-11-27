@@ -128,7 +128,7 @@ def plot_filters(ax, filters, class_covariances, means=None):
 
     # Draw the filters of sqfa as arrows on the plot
     colors = ['r', 'b']
-    awidth = 0.02
+    awidth = 0.04
     for f in range(2):
         ax[0].arrow(0, 0, filters[f, 0], filters[f, 1], width=awidth,
                     head_width=awidth*5, label=f'Filter {f}', color=colors[f])
@@ -338,8 +338,9 @@ sqfa_filters = model.filters.detach()
 lda_filters = lda(scatter_between, scatter_within)
 
 # Plot SQFA filters
+fm = 3 # filter magnification for visualization
 fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True) 
-plot_filters(ax, sqfa_filters, class_covariances, class_means)
+plot_filters(ax, sqfa_filters * fm, class_covariances, class_means)
 ax[1].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.suptitle('SQFA filters', fontsize=16, x=0.55)
 plt.tight_layout()
@@ -347,7 +348,7 @@ plt.show()
 
 # Plot LDA filters
 fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True) 
-plot_filters(ax, lda_filters, class_covariances, class_means)
+plot_filters(ax, lda_filters * fm, class_covariances, class_means)
 ax[1].legend(bbox_to_anchor=(1.05, 1), loc='upper left')
 plt.suptitle('LDA filters', fontsize=16, x=0.55)
 plt.tight_layout()
