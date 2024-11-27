@@ -192,7 +192,7 @@ fig, ax = plt.subplots(figsize=(6, 4))
 plt.bar(range(len(accuracies)), accuracies)
 plt.xticks(range(len(accuracies)), ["PCA", "LDA", "SQFA"])
 plt.title(f"QDA accuracy for different feature extraction methods")
-plt.ylabel("QFA Accuracy (%)")
+plt.ylabel("QDA Accuracy (%)")
 plt.xlabel("Features")
 # Print the accuracies on top of the bars
 for i, acc in enumerate(accuracies):
