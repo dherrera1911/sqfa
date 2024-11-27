@@ -8,7 +8,8 @@ from torch.nn.utils.parametrize import register_parametrization, remove_parametr
 from ._optim import fitting_loop
 from .constraints import FixedFilters, Identity, Sphere
 from .distances import _matrix_subset_distance_generator, affine_invariant_sq
-from .linalg import conjugate_matrix, class_statistics
+from .linalg import conjugate_matrix
+from .statistics import class_statistics
 
 __all__ = ["SQFA"]
 
@@ -143,8 +144,9 @@ class SQFA(nn.Module):
         X=None,
         y=None,
         data_scatters=None,
-        max_epochs=50,
+        max_epochs=100,
         lr=0.1,
+        estimator="oas",
         pairwise=False,
         show_progress=True,
         return_loss=False,
@@ -169,6 +171,9 @@ class SQFA(nn.Module):
             Number of max training epochs. By default 50.
         lr : float
             Learning rate for the optimizer. Default is 0.1.
+        estimator:
+            Covariance estimator to use. Options are "empirical",
+            "ledoit-wolf" and "oas". Default is "oas".
         decay_step : int
             Step at which to decay the learning rate. Default is 1000.
         decay_rate : float
@@ -188,7 +193,7 @@ class SQFA(nn.Module):
         if data_scatters is None:
             if X is None or y is None:
                 raise ValueError("Either data_scatters or X and y must be provided.")
-            stats_dict = class_statistics(X, y)
+            stats_dict = class_statistics(X, y, estimator=estimator)
             data_scatters = stats_dict["second_moments"]
 
         if not pairwise:

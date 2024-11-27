@@ -6,3 +6,4 @@ from . import distances as distances
 from . import linalg as linalg
 from . import model as model
 from . import plot as plot
+from . import statistics
