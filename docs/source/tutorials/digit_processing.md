@@ -29,6 +29,7 @@ significantly harder. Let's load the dataset and visualize some of the images.
 
 ```{code-cell} ipython3
 :tags: [remove-output]
+
 import torch
 import matplotlib.pyplot as plt
 import torchvision
