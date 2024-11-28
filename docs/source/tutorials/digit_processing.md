@@ -33,7 +33,7 @@ import torch
 import matplotlib.pyplot as plt
 import torchvision
 
-torch.manual_seed(3)
+torch.manual_seed(2)
 
 # Download and load training and test datasets
 trainset = torchvision.datasets.SVHN(root='./data', split='train', download=True)
@@ -93,6 +93,7 @@ in this tutorial. PCA and SQFA do not have this limitation.
 :::
 
 ```{code-cell} ipython3
+:execution_timeout: 600 
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.decomposition import PCA
 import sqfa
@@ -235,6 +236,7 @@ even single pixels can do a good job at separating pairs of classes.
 Let's compare PCA, LDA and SQFA in this dataset.
 
 ```{code-cell} ipython3
+:tags: [remove-output]
 # Load MNIST
 trainset = torchvision.datasets.MNIST(
     root='./data', train=True, download=True)
@@ -250,7 +252,9 @@ y_test = testset.targets
 
 # Scale data and subtract global mean
 x_train, x_test = scale_and_center(x_train, x_test)
+```
 
+```{code-cell} ipython3
 # See how many dimensions, samples and classes we have
 print(f"Number of dimensions: {x_train.shape[1]}")
 print(f"Number of samples: {x_train.shape[0]}")
@@ -274,6 +278,7 @@ Let's now apply PCA, LDA and SQFA to learn 9 filters for this dataset
 and visualize the filters.
 
 ```{code-cell} ipython3
+:execution_timeout: 600 
 # Train PCA
 pca = PCA(n_components=N_FILTERS)
 pca.fit(x_train)
@@ -388,6 +393,7 @@ plt.show()
 Let's now apply PCA, LDA and SQFA to learn 9 filters for this dataset.
 
 ```{code-cell} ipython3
+:execution_timeout: 600 
 # Train PCA
 pca = PCA(n_components=N_FILTERS)
 pca.fit(x_train)
