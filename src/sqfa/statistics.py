@@ -42,7 +42,7 @@ def class_statistics(points, labels, estimator="empirical", shrunk_param=0.1):
             cov_i = sample_covariance(class_points)
         elif estimator == "oas":
             cov_i = oas_covariance(class_points)
-        covariances[i] = torch.tensor(cov_i, dtype=dtype)
+        covariances[i] = torch.as_tensor(cov_i, dtype=dtype)
         second_moments[i] = covariances[i] + torch.einsum('i,j->ij', means[i], means[i])
 
     statistics_dict = {
