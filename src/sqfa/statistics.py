@@ -81,8 +81,8 @@ def oas_covariance(points, assume_centered=False):
     sample_cov = sample_covariance(points, assume_centered=assume_centered)
 
     # Compute the OAS shrinkage parameter
-    tr_cov = torch.trace(sample_covariance)
-    tr_prod = torch.sum(sample_covariance ** 2)
+    tr_cov = torch.trace(sample_cov)
+    tr_prod = torch.sum(sample_cov ** 2)
     shrinkage = (
       (1 - 2 / n_dim) * tr_prod + tr_cov ** 2
     ) / (
