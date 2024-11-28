@@ -28,7 +28,6 @@ and while it has a similar structure to the MNIST dataset, it is
 significantly harder. Let's load the dataset and visualize some of the images.
 
 ```{code-cell} ipython3
-:execution_timeout: 600 
 import torch
 import matplotlib.pyplot as plt
 import torchvision
@@ -93,7 +92,6 @@ in this tutorial. PCA and SQFA do not have this limitation.
 :::
 
 ```{code-cell} ipython3
-:execution_timeout: 1800 
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.decomposition import PCA
 import sqfa
@@ -278,7 +276,6 @@ Let's now apply PCA, LDA and SQFA to learn 9 filters for this dataset
 and visualize the filters.
 
 ```{code-cell} ipython3
-:execution_timeout: 600 
 # Train PCA
 pca = PCA(n_components=N_FILTERS)
 pca.fit(x_train)
@@ -393,7 +390,6 @@ plt.show()
 Let's now apply PCA, LDA and SQFA to learn 9 filters for this dataset.
 
 ```{code-cell} ipython3
-:execution_timeout: 600 
 # Train PCA
 pca = PCA(n_components=N_FILTERS)
 pca.fit(x_train)

@@ -69,6 +69,11 @@ napoleon_use_rtype = True
 templates_path = ["_templates"]
 exclude_patterns = []
 
+# -- Execution Configuration ---------------------------------------------------
+
+# Remove execution time limit
+nb_execution_timeout = -1  # Use -1 or None to disable the timeout
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
