@@ -28,11 +28,12 @@ and while it has a similar structure to the MNIST dataset, it is
 significantly harder. Let's load the dataset and visualize some of the images.
 
 ```{code-cell} ipython3
+:tags: [remove-output]
 import torch
 import matplotlib.pyplot as plt
 import torchvision
 
-torch.manual_seed(2)
+torch.manual_seed(3)
 
 # Download and load training and test datasets
 trainset = torchvision.datasets.SVHN(root='./data', split='train', download=True)
@@ -58,7 +59,9 @@ def scale_and_center(x_train, x_test):
     return x_train, x_test
 
 x_train, x_test = scale_and_center(x_train, x_test)
+```
 
+```{code-cell} ipython3
 # See how many dimensions, samples and classes we have
 print(f"Number of dimensions: {x_train.shape[1]}")
 print(f"Number of samples: {x_train.shape[0]}")
@@ -68,11 +71,13 @@ print(f"Number of test samples: {x_test.shape[0]}")
 # Visualize some of the centered images
 names = y_train.unique().tolist()
 n_classes = len(y_train.unique())
-fig, ax = plt.subplots(1, n_classes, figsize=(10, 2))
+fig, ax = plt.subplots(2, n_classes // 2, figsize=(8, 4))
 for i in range(n_classes):
-    ax[i].imshow(x_train[y_train == i][20].reshape(n_row, n_col), cmap='gray')
-    ax[i].axis('off')
-    ax[i].set_title(names[i], fontsize=10)
+    row = i // 5
+    col = i % 5
+    ax[row, col].imshow(x_train[y_train == i][20].reshape(n_row, n_col), cmap='gray')
+    ax[row, col].axis('off')
+    ax[row, col].set_title(names[i], fontsize=10)
 plt.tight_layout()
 plt.show()
 ```
@@ -120,7 +125,7 @@ sqfa_model.fit(
   x_train,
   y_train,
   max_epochs=300,
-  show_progress=False
+  show_progress=False,
 )
 ```
 
