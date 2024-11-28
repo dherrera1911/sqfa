@@ -28,6 +28,7 @@ and while it has a similar structure to the MNIST dataset, it is
 significantly harder. Let's load the dataset and visualize some of the images.
 
 ```{code-cell} ipython3
+:tags: [remove-output]
 import torch
 import matplotlib.pyplot as plt
 import torchvision
@@ -236,10 +237,8 @@ Let's compare PCA, LDA and SQFA in this dataset.
 ```{code-cell} ipython3
 :tags: [remove-output]
 # Load MNIST
-trainset = torchvision.datasets.MNIST(
-    root='./data', train=True, download=True)
-testset = torchvision.datasets.MNIST(
-    root='./data', train=False, download=True)
+trainset = torchvision.datasets.MNIST(root='./data', train=True, download=True)
+testset = torchvision.datasets.MNIST(root='./data', train=False, download=True)
 
 n_samples, n_row, n_col = trainset.data.shape
 n_dim = n_row * n_col
