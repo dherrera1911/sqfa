@@ -20,6 +20,15 @@ tutorials/toy_problem.md
 tutorials/digit_processing.md
 ```
 
+```{toctree}
+---
+maxdepth: 2
+caption: Advanced
+---
+
+tutorials/distances.md
+```
+
 
 ```{toctree}
 ---
