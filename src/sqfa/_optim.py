@@ -13,6 +13,23 @@ def __dir__():
     return __all__
 
 
+def check_distances_valid(distances):
+    """
+    Check if off-diagonal distances are valid. Raise an error if they are not.
+
+    Parameters
+    ----------
+    distances : torch.Tensor
+        Tensor of pairwise distances between covariance matrices.
+    """
+    n_classes = distances.shape[0]
+    tril_ind = torch.tril_indices(n_classes, n_classes, offset=-1)
+    if torch.isnan(distances[tril_ind]).any():
+        raise ValueError("Some distances between classes are NaN.")
+    if torch.isinf(distances[tril_ind]).any():
+        raise ValueError("Some distances between classes are inf.")
+
+
 def fitting_loop(
     model,
     data_scatters,
@@ -63,15 +80,17 @@ def fitting_loop(
         **kwargs,
     )
 
+    n_classes = data_scatters.shape[0]
+    tril_ind = torch.tril_indices(n_classes, n_classes, offset=-1)
+
     def closure():
         optimizer.zero_grad()
         distances = model.get_class_distances(data_scatters, regularized=True)
+        check_distances_valid(distances)
         epoch_loss = -torch.mean(distances[tril_ind[0], tril_ind[1]])
         epoch_loss.backward()
         return epoch_loss
 
-    n_classes = data_scatters.shape[0]
-    tril_ind = torch.tril_indices(n_classes, n_classes, offset=-1)
     loss_list = []
     training_time = []
     total_start_time = time.time()
