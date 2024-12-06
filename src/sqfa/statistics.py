@@ -3,7 +3,7 @@ import torch
 __all__ = ["class_statistics"]
 
 
-def class_statistics(points, labels, estimator="empirical", shrunk_param=0.1):
+def class_statistics(points, labels, estimator="empirical"):
     """
     Compute the mean, covariance and second moment matrix of each class.
 
