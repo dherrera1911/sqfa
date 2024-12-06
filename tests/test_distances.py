@@ -1,6 +1,5 @@
 """Tests for the distances module."""
 
-import geomstats.geometry.spd_matrices as spd_matrices
 import pytest
 import torch
 
@@ -11,41 +10,6 @@ from sqfa.distances import (
 )
 
 
-def distance_ref(A, B, metric):
-    """
-    Compute the affine invariant distance between pairs (A, B) using geomstats.
-
-    Parameters
-    ----------
-    A : np.ndarray
-        A tensor of spd matrices of shape (n_matrices_A, n_dim, n_dim).
-    B : np.ndarray
-        A tensor of spd matrices of shape (n_matrices_B, n_dim, n_dim).
-    """
-    if A.dim() < 3:
-        A = A.unsqueeze(0)
-    if B.dim() < 3:
-        B = B.unsqueeze(0)
-
-    n_dim = A.shape[1]
-
-    # Initialize manifold
-    manifold = spd_matrices.SPDMatrices(
-        n=n_dim,
-        equip=False,
-    )
-    if metric == "affine":
-        manifold.equip_with_metric(spd_matrices.SPDAffineMetric)
-    elif metric == "log_euclidean":
-        manifold.equip_with_metric(spd_matrices.SPDLogEuclideanMetric)
-
-    distances_geomstats = manifold.metric.squared_dist(
-        point_a=A.numpy()[:, None, :, :], point_b=B.numpy()[None, :, :, :]
-    )
-
-    return torch.squeeze(torch.as_tensor(distances_geomstats, dtype=torch.float32))
-
-
 @pytest.fixture(scope="function")
 def sample_spd_matrices(n_matrices_A, n_matrices_B, n_dim):
     """Generate a tensor of SPD matrices."""
@@ -53,6 +17,11 @@ def sample_spd_matrices(n_matrices_A, n_matrices_B, n_dim):
     B = sample_spd(n_matrices_B, n_dim)
     return A, B
 
+def get_diag(A):
+    if A.dim() > 0:
+        return A.diagonal(dim1=-2, dim2=-1)
+    else:
+        return A
 
 @pytest.mark.parametrize("n_matrices_A", [1, 4, 8])
 @pytest.mark.parametrize("n_matrices_B", [1, 4, 8])
@@ -61,16 +30,56 @@ def test_distance_sq(sample_spd_matrices, n_matrices_A, n_matrices_B, n_dim):
     """Test the generalized eigenvalues function."""
     A, B = sample_spd_matrices
 
-    ai_distances = affine_invariant_sq(A, B)
-    ai_distances_ref = distance_ref(A, B, "affine")
+    ai_distances_sq = affine_invariant_sq(A, A)
+
+    if not n_matrices_A == 1:
+        assert ai_distances_sq.shape == (n_matrices_A, n_matrices_A)
+    else:
+        assert ai_distances_sq.shape == ()
 
     assert torch.allclose(
-        ai_distances, ai_distances_ref, atol=1e-5
-    ), "The affine invariant distance is not correct."
-
-    le_distances = log_euclidean_sq(A, B)
-    le_distances_ref = distance_ref(A, B, "log_euclidean")
+        ai_distances_sq, ai_distances_sq.T, atol=1e-5
+    ), "The self-distance matrix for AIRM is not symmetric"
 
     assert torch.allclose(
-        le_distances, le_distances_ref, atol=1e-5
-    ), "The log euclidean distance is not correct."
+        get_diag(ai_distances_sq), torch.zeros(n_matrices_A), atol=1e-5
+    ), "The diagonal of the self-distance matrix for AIRM is not zero"
+
+    A_inv = torch.inverse(A)
+
+    ai_distances_inv_sq = affine_invariant_sq(A_inv, A_inv)
+
+    assert torch.allclose(
+        ai_distances_sq, ai_distances_inv_sq, atol=1e-5
+    ), "The affine invariant distance is not invariant to inversion."
+
+
+    le_distances_sq = log_euclidean_sq(A, A)
+
+    if not n_matrices_A == 1:
+        assert le_distances_sq.shape == (n_matrices_A, n_matrices_A)
+    else:
+        assert le_distances_sq.shape == ()
+
+    assert torch.allclose(
+        le_distances_sq, le_distances_sq.T, atol=1e-5
+    ), "The self-distance matrix for AIRM is not symmetric"
+
+    assert torch.allclose(
+        get_diag(le_distances_sq), torch.zeros(n_matrices_A), atol=1e-5
+    ), "The diagonal of the self-distance matrix for AIRM is not zero"
+
+    le_distances_inv_sq = log_euclidean_sq(A_inv, A_inv)
+
+    assert torch.allclose(
+        le_distances_sq, le_distances_inv_sq, atol=1e-5
+    ), "The log-Euclidean distance is not invariant to inversion."
+
+    B = torch.eye(n_dim)
+
+    ai_dist_to_eye = affine_invariant_sq(A, B)
+    le_dist_to_eye = log_euclidean_sq(A, B)
+
+    assert torch.allclose(
+        ai_dist_to_eye, le_dist_to_eye, atol=1e-5
+    ), "The AIRM and LE distances from the identity are not equal."
