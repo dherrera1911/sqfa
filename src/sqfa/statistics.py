@@ -1,6 +1,8 @@
+"""Functions to compute class statistics of labeled data points."""
+
 import torch
 
-__all__ = ["class_statistics"]
+__all__ = ["class_statistics", "oas_covariance"]
 
 
 def class_statistics(points, labels, estimator="empirical"):
