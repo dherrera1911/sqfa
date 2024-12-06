@@ -21,7 +21,10 @@ keywords = ['covariance matrices', 'second moments', 'dimensionality reduction',
 dev = [
     "pytest>=5.1.2",
     'pytest-cov',
-    'pytest-xdist']
+    'pytest-xdist',
+    'scikit-learn',
+    'torchvision',
+]
 
 # Copied from plenoptic
 docs = [
