@@ -8,11 +8,11 @@ import torch
 from make_examples import sample_spd
 from sqfa.linalg import (
     conjugate_matrix,
-    conjugate_to_identity,
     generalized_eigenvalues,
     generalized_eigenvectors,
     spd_log,
     spd_sqrt,
+    spd_inv_sqrt,
 )
 
 
@@ -308,15 +308,15 @@ def test_conjugate_matrix(
 @pytest.mark.parametrize("n_dim", [2, 4])
 @pytest.mark.parametrize("n_matrices_A", [1, 4])
 @pytest.mark.parametrize("n_matrices_B", [1])
-def test_conjugate_to_identity(
+def test_spd_inv_sqrt(
     sample_spd_matrices, n_dim, n_matrices_A, n_matrices_B
 ):
     """Test the conjugate_matrix function."""
     A, B = sample_spd_matrices
 
-    C = conjugate_to_identity(A)
+    A_inv_sqrt = spd_inv_sqrt(A)
 
-    A_conjugate = conjugate_matrix(A, C)
+    A_conjugate = conjugate_matrix(A, A_inv_sqrt)
 
     identity = torch.eye(n_dim, dtype=torch.float32)
     if n_matrices_A > 1:

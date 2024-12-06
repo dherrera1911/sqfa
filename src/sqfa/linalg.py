@@ -3,7 +3,7 @@
 import torch
 
 __all__ = ["conjugate_matrix", "generalized_eigenvalues", "generalized_eigenvectors", "spd_sqrt",
-           "spd_log", "conjugate_to_identity"]
+           "spd_log", "spd_inv_sqrt"]
 
 
 def __dir__():
@@ -39,27 +39,6 @@ def conjugate_matrix(A, B):
     return torch.squeeze(C, dim=squeeze_dim)
 
 
-def conjugate_to_identity(M):
-    """
-    For symmetric positive definite matrix M, compute the matrix C such that
-    C M C^T = I, where I is the identity matrix.
-
-    Parameters
-    ----------
-    M : torch.Tensor
-        Symmetric positive definite matrices. Shape (n_batch, n_dim, n_dim).
-
-    Returns
-    -------
-    C : torch.Tensor
-        The matrix C such that C M C^T = I. Shape (n_batch, n_dim, n_dim).
-    """
-    eigvals, eigvecs = torch.linalg.eigh(M)
-    inv_sqrt_eigvals = torch.sqrt(1.0 / eigvals)
-    C = eigvecs * inv_sqrt_eigvals.unsqueeze(-2)
-    return C.transpose(-2, -1)
-
-
 def generalized_eigenvalues(A, B):
     """
     Compute the generalized eigenvalues of the pair of symmetric positive
@@ -79,8 +58,8 @@ def generalized_eigenvalues(A, B):
         order. Shape (n_batch_A, n_batch_B, n_dim).
         If a batch dimension is 1, it is squeezed out.
     """
-    C = conjugate_to_identity(B)
-    A_conj = conjugate_matrix(A, C)
+    B_inv_sqrt = spd_inv_sqrt(B)
+    A_conj = conjugate_matrix(A, B_inv_sqrt)
     eigenvalues = torch.linalg.eigvalsh(A_conj)
     return eigenvalues.flip(-1)
 
@@ -109,12 +88,12 @@ def generalized_eigenvectors(A, B):
         Shape (n_batch_A, n_batch_B, n_dim).
         If a batch dimension is 1, it is squeezed out.
     """
-    C = conjugate_to_identity(B)
-    A_conj = conjugate_matrix(A, C)
+    B_inv_sqrt = spd_inv_sqrt(B)
+    A_conj = conjugate_matrix(A, B_inv_sqrt)
     if A.dim() == 2:
         A_conj = A_conj.unsqueeze(0)
     if B.dim() == 2:
-        C = C.unsqueeze(0)
+        B_inv_sqrt = B_inv_sqrt.unsqueeze(0)
         A_conj = A_conj.unsqueeze(1)
     eigenvalues, eigenvectors = torch.linalg.eigh(A_conj)
 
@@ -123,7 +102,7 @@ def generalized_eigenvectors(A, B):
     eigenvalues = eigenvalues.flip(-1)
 
     # Transform eigenvectors back to the original basis
-    eigenvectors = torch.einsum("bij,abjk->abik", C.transpose(-2,-1), eigenvectors)
+    eigenvectors = torch.einsum("bij,abjk->abik", B_inv_sqrt.transpose(-2,-1), eigenvectors)
     eigenvectors = eigenvectors / torch.linalg.norm(eigenvectors, dim=-2, keepdim=True)
 
     return torch.squeeze(eigenvectors, dim=(0,1)), torch.squeeze(eigenvalues, dim=(0,1))
@@ -150,6 +129,27 @@ def spd_sqrt(M):
         "...ij,...j,...kj->...ik", eigvecs, torch.sqrt(eigvals), eigvecs
     )
     return M_sqrt
+
+
+def spd_inv_sqrt(M):
+    """
+    For symmetric positive definite matrix M, compute the inverse square
+    root of M.
+
+    Parameters
+    ----------
+    M : torch.Tensor
+        Symmetric positive definite matrices. Shape (n_batch, n_dim, n_dim).
+
+    Returns
+    -------
+    M_inv_sqrt : torch.Tensor
+        Inverse square root of M. Shape (n_batch, n_dim, n_dim).
+    """
+    eigvals, eigvecs = torch.linalg.eigh(M)
+    inv_sqrt_eigvals = torch.sqrt(1.0 / eigvals)
+    M_inv_sqrt = eigvecs * inv_sqrt_eigvals.unsqueeze(-2)
+    return M_inv_sqrt.transpose(-2, -1)
 
 
 def spd_log(M):
