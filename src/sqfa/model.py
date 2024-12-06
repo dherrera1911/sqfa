@@ -144,7 +144,7 @@ class SQFA(nn.Module):
         X=None,
         y=None,
         data_scatters=None,
-        max_epochs=100,
+        max_epochs=300,
         lr=0.1,
         estimator="oas",
         pairwise=False,
@@ -153,7 +153,7 @@ class SQFA(nn.Module):
         **kwargs,
     ):
         """
-        Fit the model.
+        Fit the SQFA model to data using the LBFGS optimizer.
 
         Parameters
         ----------
@@ -173,11 +173,7 @@ class SQFA(nn.Module):
             Learning rate for the optimizer. Default is 0.1.
         estimator:
             Covariance estimator to use. Options are "empirical",
-            "ledoit-wolf" and "oas". Default is "oas".
-        decay_step : int
-            Step at which to decay the learning rate. Default is 1000.
-        decay_rate : float
-            Rate at which to decay the learning rate. Default is 1.0.
+            and "oas". Default is "oas".
         pairwise : bool
             If True, then filters are optimized pairwise (the first 2 filters
             are optimized together, then held fixed and the next 2 filters are
