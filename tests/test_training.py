@@ -1,6 +1,5 @@
 """Test functions for training sqfa."""
 
-import numpy as np
 import pytest
 import torch
 
