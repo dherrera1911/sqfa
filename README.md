@@ -69,17 +69,17 @@ and then create a virtual environment with Python 3.11 with the following
 shell command:
 
 ```bash
-conda create -n my-sqfa-env python=3.11
+conda create -n my-sqfa python=3.11
 ```
 
 You can then activate the virtual environment with the following command:
 
 ```bash
-conda activate my-sqfa-env
+conda activate my-sqfa
 ```
 
-Whenever you want to use the downloaded package, you should activate the
-virtual environment `my-sqfa-env`.
+You should activate the `my-sqfa` environment to install the package, and every
+time you want to use it.
 
 ### Install package
 
@@ -94,4 +94,9 @@ pip install -e .
 
 The first command clones the repository, the second command moves to the
 repository directory, and the third command installs the package in
-editable mode.
+editable mode. If you want to install the dependencies needed to run
+the tutorials, you should substitute the last command with the following:
+
+```bash
+pip install -e .[dev]
+```
