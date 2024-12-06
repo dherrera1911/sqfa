@@ -9,13 +9,14 @@ from sqfa.distances import (
     log_euclidean_sq,
 )
 
+torch.set_default_dtype(torch.float64)
 
 @pytest.fixture(scope="function")
-def sample_spd_matrices(n_matrices_A, n_matrices_B, n_dim):
+def sample_spd_matrices(n_matrices_A, n_dim):
     """Generate a tensor of SPD matrices."""
     A = sample_spd(n_matrices_A, n_dim)
-    B = sample_spd(n_matrices_B, n_dim)
-    return A, B
+    return A
+
 
 def get_diag(A):
     if A.dim() > 0:
@@ -24,11 +25,10 @@ def get_diag(A):
         return A
 
 @pytest.mark.parametrize("n_matrices_A", [1, 4, 8])
-@pytest.mark.parametrize("n_matrices_B", [1, 4, 8])
 @pytest.mark.parametrize("n_dim", [2, 4, 6])
-def test_distance_sq(sample_spd_matrices, n_matrices_A, n_matrices_B, n_dim):
+def test_distance_sq(sample_spd_matrices, n_matrices_A, n_dim):
     """Test the generalized eigenvalues function."""
-    A, B = sample_spd_matrices
+    A = sample_spd_matrices
 
     ai_distances_sq = affine_invariant_sq(A, A)
 

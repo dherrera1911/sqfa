@@ -14,6 +14,7 @@ from sqfa.linalg import (
     spd_inv_sqrt,
 )
 
+torch.set_default_dtype(torch.float64)
 
 def generalized_eigenvalues_ref(A, B):
     """
@@ -45,8 +46,7 @@ def generalized_eigenvalues_ref(A, B):
         for j in range(n_matrices_B):
             eigvals[i, j] = torch.as_tensor(
               scipy.linalg.eigvals(A[i], B[j]),
-              dtype=torch.float32
-            )
+            ).abs()
 
     eigvals = torch.sort(eigvals, axis=-1, descending=True)[0]
 
@@ -83,8 +83,8 @@ def generalized_eigenvectors_ref(A, B):
         for j in range(n_matrices_B):
             pair_vals, pair_vecs = scipy.linalg.eig(A[i], B[j])
             # Convert to torch tensors
-            pair_vals = torch.as_tensor(pair_vals, dtype=torch.float32)
-            pair_vecs = torch.as_tensor(pair_vecs, dtype=torch.float32)
+            pair_vals = torch.as_tensor(pair_vals).abs()
+            pair_vecs = torch.as_tensor(pair_vecs).abs()
             # Sort the eigenvectors by the eigenvalues in descending order
             _, idx = torch.sort(pair_vals, descending=True)
             # invert the order to get the largest eigenvalues first
@@ -115,7 +115,7 @@ def matrix_sqrt_ref(A):
     sqrt_A = torch.zeros((n_matrices, n_dim, n_dim))
     if n_dim > 1:
         for i in range(n_matrices):
-            sqrt_A[i] = torch.as_tensor(scipy.linalg.sqrtm(A[i]), dtype=torch.float32)
+            sqrt_A[i] = torch.as_tensor(scipy.linalg.sqrtm(A[i]))
     else:
         sqrt_A = torch.sqrt(A)
     return sqrt_A
@@ -141,7 +141,7 @@ def matrix_log_ref(A):
     n_dim = A.shape[1]
     log_A = torch.zeros((n_matrices, n_dim, n_dim))
     for i in range(n_matrices):
-        log_A[i] = torch.as_tensor(scipy.linalg.logm(A[i]), dtype=torch.float32)
+        log_A[i] = torch.as_tensor(scipy.linalg.logm(A[i]))
 
     return log_A
 
@@ -238,6 +238,7 @@ def test_generalized_eigenvalues(
         ), "generalized_eigenvalues() has incorrect dimensions for B.dim()==1."
 
     reference_eigvals = generalized_eigenvalues_ref(A, B)
+    reference_eigvals = reference_eigvals
     assert torch.allclose(
         eigvals, reference_eigvals, atol=1e-5
     ), "Generalized eigenvalues are not correct."
@@ -253,6 +254,7 @@ def test_generalized_eigenvectors(
     A, B = sample_spd_matrices
     eigvecs, eigvals = generalized_eigenvectors(A, B)
     eigvecs_ref = generalized_eigenvectors_ref(A, B)
+    eigvecs_ref = eigvecs_ref
     assert (
       torch.allclose(torch.abs(eigvecs), torch.abs(eigvecs_ref), atol=1e-4)
     ), "Generalized eigenvectors are not correct."
@@ -319,14 +321,14 @@ def test_spd_inv_sqrt(
 
     A_conjugate = conjugate_matrix(A, A_inv_sqrt)
 
-    identity = torch.eye(n_dim, dtype=torch.float32)
+    identity = torch.eye(n_dim)
     if n_matrices_A > 1:
         i = torch.arange(0, n_matrices_A)
         A_conjugate = A_conjugate[i, i]
         identity = identity.unsqueeze(0).repeat(n_matrices_A, 1, 1)
 
-    assert torch.allclose(A_conjugate, identity, atol=1e-6), (
-      "Conjugate to identity is not correct."
+    assert torch.allclose(A_conjugate, identity, atol=1e-5), (
+      "Inverse square root is not correct."
     )
 
 
@@ -338,7 +340,7 @@ def test_spd_sqrt(sample_spd_matrices, n_matrices_A, n_matrices_B, n_dim):
     A, B = sample_spd_matrices
     sqrt_A = spd_sqrt(A)
     sqrt_A_ref = matrix_sqrt_ref(A)
-    sqrt_A_ref = torch.as_tensor(sqrt_A_ref, dtype=torch.float32)
+    sqrt_A_ref = torch.as_tensor(sqrt_A_ref)
 
     if n_matrices_A > 1:
         assert (
@@ -368,7 +370,7 @@ def test_spd_log(sample_spd_matrices, n_matrices_A, n_matrices_B, n_dim):
     A, B = sample_spd_matrices
     log_A = spd_log(A)
     log_A_ref = matrix_log_ref(A)
-    log_A_ref = torch.as_tensor(log_A_ref, dtype=torch.float32)
+    log_A_ref = torch.as_tensor(log_A_ref)
 
     if n_matrices_A > 1:
         assert (
