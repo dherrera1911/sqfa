@@ -1,6 +1,5 @@
 """Tests for the linalg module."""
 
-import numpy as np
 import pytest
 import scipy.linalg
 import torch
@@ -22,9 +21,9 @@ def generalized_eigenvalues_ref(A, B):
 
     Parameters
     ----------
-    A : np.ndarray
+    A : torch.Tensor
         A tensor of matrices of shape (n_matrices_A, n_dim, n_dim).
-    B : np.ndarray
+    B : torch.Tensor
         A tensor of matrices of shape (n_matrices_B, n_dim, n_dim).
 
     Returns
@@ -41,13 +40,15 @@ def generalized_eigenvalues_ref(A, B):
     n_matrices_B = B.shape[0]
     n_dim = A.shape[1]
 
-    eigvals = np.zeros((n_matrices_A, n_matrices_B, n_dim))
+    eigvals = torch.zeros((n_matrices_A, n_matrices_B, n_dim))
     for i in range(n_matrices_A):
         for j in range(n_matrices_B):
-            eigvals[i, j] = scipy.linalg.eigvals(A[i], B[j])
+            eigvals[i, j] = torch.as_tensor(
+              scipy.linalg.eigvals(A[i], B[j]),
+              dtype=torch.float32
+            )
 
-    eigvals = torch.as_tensor(np.sort(eigvals, axis=-1), dtype=torch.float32)
-    eigvals = eigvals.flip(-1)
+    eigvals = torch.sort(eigvals, axis=-1, descending=True)[0]
 
     return torch.squeeze(eigvals, dim=(0, 1))
 
@@ -58,9 +59,9 @@ def generalized_eigenvectors_ref(A, B):
 
     Parameters
     ----------
-    A : np.ndarray
+    A : torch.Tensor
         A tensor of matrices of shape (n_matrices_A, n_dim, n_dim).
-    B : np.ndarray
+    B : torch.Tensor
         A tensor of matrices of shape (n_matrices_B, n_dim, n_dim).
 
     Returns
@@ -77,18 +78,18 @@ def generalized_eigenvectors_ref(A, B):
     n_matrices_B = B.shape[0]
     n_dim = A.shape[1]
 
-    eigvecs = np.zeros((n_matrices_A, n_matrices_B, n_dim, n_dim))
+    eigvecs = torch.zeros((n_matrices_A, n_matrices_B, n_dim, n_dim))
     for i in range(n_matrices_A):
         for j in range(n_matrices_B):
-            vals, vecs = scipy.linalg.eig(A[i], B[j])
+            pair_vals, pair_vecs = scipy.linalg.eig(A[i], B[j])
+            # Convert to torch tensors
+            pair_vals = torch.as_tensor(pair_vals, dtype=torch.float32)
+            pair_vecs = torch.as_tensor(pair_vecs, dtype=torch.float32)
             # Sort the eigenvectors by the eigenvalues in descending order
-            idx = np.argsort(vals)[::-1]
+            _, idx = torch.sort(pair_vals, descending=True)
             # invert the order to get the largest eigenvalues first
-            vals = vals[idx]
-            vecs = vecs[:, idx]
-            eigvecs[i, j] = vecs
-
-    eigvecs = torch.as_tensor(eigvecs, dtype=torch.float32)
+            pair_vecs = pair_vecs[:, idx]
+            eigvecs[i, j] = pair_vecs
 
     return torch.squeeze(eigvecs, dim=(0, 1))
 
@@ -99,24 +100,24 @@ def matrix_sqrt_ref(A):
 
     Parameters
     ----------
-    A : np.ndarray
+    A : torch.Tensor
         A tensor of SPD matrices of shape (n_matrices, n_dim, n_dim).
 
     Returns
     -------
-    sqrt_A : np.ndarray
+    sqrt_A : torch.Tensor
         A tensor of square roots of the input matrices of shape (n_matrices, n_dim, n_dim).
     """
     if A.dim() < 3:
         A = A.unsqueeze(0)
     n_matrices = A.shape[0]
     n_dim = A.shape[1]
-    sqrt_A = np.zeros((n_matrices, n_dim, n_dim))
+    sqrt_A = torch.zeros((n_matrices, n_dim, n_dim))
     if n_dim > 1:
         for i in range(n_matrices):
-            sqrt_A[i] = scipy.linalg.sqrtm(A[i])
+            sqrt_A[i] = torch.as_tensor(scipy.linalg.sqrtm(A[i]), dtype=torch.float32)
     else:
-        sqrt_A = np.sqrt(A)
+        sqrt_A = torch.sqrt(A)
     return sqrt_A
 
 
@@ -126,21 +127,21 @@ def matrix_log_ref(A):
 
     Parameters
     ----------
-    A : np.ndarray
+    A : torch.Tensor
         A tensor of SPD matrices of shape (n_matrices, n_dim, n_dim).
 
     Returns
     -------
-    log_A : np.ndarray
+    log_A : torch.Tensor
         A tensor of matrix logarithms of the input matrices of shape (n_matrices, n_dim, n_dim).
     """
     if A.dim() < 3:
         A = A.unsqueeze(0)
     n_matrices = A.shape[0]
     n_dim = A.shape[1]
-    log_A = np.zeros((n_matrices, n_dim, n_dim))
+    log_A = torch.zeros((n_matrices, n_dim, n_dim))
     for i in range(n_matrices):
-        log_A[i] = scipy.linalg.logm(A[i])
+        log_A[i] = torch.as_tensor(scipy.linalg.logm(A[i]), dtype=torch.float32)
 
     return log_A
 
