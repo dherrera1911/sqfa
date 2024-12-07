@@ -1,7 +1,8 @@
+"""Functions for working with colors and colormaps."""
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.colors import Normalize
 from matplotlib.colorbar import ColorbarBase
+from matplotlib.colors import Normalize
 
 
 def get_normalized_color_map(color_map, values, color_limits=None):

@@ -9,9 +9,9 @@ from sqfa.linalg import (
     conjugate_matrix,
     generalized_eigenvalues,
     generalized_eigenvectors,
+    spd_inv_sqrt,
     spd_log,
     spd_sqrt,
-    spd_inv_sqrt,
 )
 
 torch.set_default_dtype(torch.float64)

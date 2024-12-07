@@ -1,10 +1,8 @@
-"""
-Utilities for plotting data, model parameters and geometry.
-"""
+"""Utilities for plotting data, model parameters and geometry."""
 
+from .colors import draw_color_bar
 from .data import scatter_data
 from .ellipses import statistics_ellipses
-from .colors import draw_color_bar
 
 __all__ = [
     "scatter_data",

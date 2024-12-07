@@ -1,3 +1,4 @@
+"""Plot ellipses."""
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -81,16 +82,13 @@ def statistics_ellipses(
     if ax is None:
         _, ax = plt.subplots()
 
-    if centers is None: 
+    if centers is None:
         centers = torch.zeros(ellipses.shape[0], ellipses.shape[1])
 
     if classes_plot is None:
         classes_plot = np.arange(centers.shape[0])
 
-    if values is None:
-        values = np.arange(len(classes_plot))
-    else:
-        values = values.numpy()
+    values = np.arange(len(classes_plot)) if values is None else values.numpy()
 
     if isinstance(color_map, str):
         color_map = plt.get_cmap(color_map)

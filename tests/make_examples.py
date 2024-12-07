@@ -2,6 +2,7 @@
 
 import torch
 
+
 def make_orthogonal_matrices(n_matrices, n_dim):
     """Generate random orthogonal matrices."""
     low_tri = torch.randn(n_matrices, n_dim, n_dim)

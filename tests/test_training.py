@@ -46,6 +46,7 @@ def make_rotated_classes(base_cov, angles, dims):
 
 @pytest.fixture(scope="function")
 def make_dataset():
+    """Create a dataset of 8 classes with rotated covariances."""
     angle_base = torch.tensor([0, 1, 2, 3, 4])
     angles = [
       angle_base * 20, # Dimensions 1, 2

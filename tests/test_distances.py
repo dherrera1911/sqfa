@@ -19,6 +19,7 @@ def sample_spd_matrices(n_matrices_A, n_dim):
 
 
 def get_diag(A):
+    """Get the diagonal of a tensor."""
     if A.dim() > 0:
         return A.diagonal(dim1=-2, dim2=-1)
     else:
@@ -32,7 +33,7 @@ def test_distance_sq(sample_spd_matrices, n_matrices_A, n_dim):
 
     ai_distances_sq = affine_invariant_sq(A, A)
 
-    if not n_matrices_A == 1:
+    if n_matrices_A != 1:
         assert ai_distances_sq.shape == (n_matrices_A, n_matrices_A)
     else:
         assert ai_distances_sq.shape == ()
@@ -56,7 +57,7 @@ def test_distance_sq(sample_spd_matrices, n_matrices_A, n_dim):
 
     le_distances_sq = log_euclidean_sq(A, A)
 
-    if not n_matrices_A == 1:
+    if n_matrices_A != 1:
         assert le_distances_sq.shape == (n_matrices_A, n_matrices_A)
     else:
         assert le_distances_sq.shape == ()

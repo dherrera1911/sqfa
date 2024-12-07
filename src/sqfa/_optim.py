@@ -130,7 +130,7 @@ def fitting_loop(
 
     else:  # Executes if no break occurs
         print(f"Reached max_epochs ({max_epochs}) without meeting stopping criteria." + \
-              f"Consider increasing max_epochs, changing initialization or using dtype=torch.float64.")
+              "Consider increasing max_epochs, changing initialization or using dtype=torch.float64.")
 
     if return_loss:
         return torch.tensor(loss_list), torch.tensor(training_time)

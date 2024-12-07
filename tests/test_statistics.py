@@ -1,6 +1,5 @@
 """Tests for the statistics module."""
 
-import pytest
 import torch
 
 from sqfa.statistics import class_statistics

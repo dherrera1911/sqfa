@@ -1,6 +1,6 @@
+"""Scatter data of different classes with color code."""
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 
 from ._data_wrangle import subsample_class_points, subsample_classes
 from .colors import get_class_rgba, get_normalized_color_map
@@ -48,10 +48,7 @@ def scatter_data(
     labels_plt = labels_plt.detach().cpu().numpy()
     data_plt, labels_plt = subsample_classes(data_plt, labels_plt, classes_plot)
 
-    if values is None:
-        values = np.arange(len(np.unique(labels_plt)))
-    else:
-        values = values.numpy()
+    values = np.arange(len(np.unique(labels_plt))) if values is None else values.numpy()
 
     color_map = plt.get_cmap("viridis")
     class_colors = get_class_rgba(color_map, values)

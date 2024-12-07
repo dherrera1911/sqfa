@@ -36,7 +36,6 @@ def class_statistics(points, labels, estimator="empirical"):
     for i in range(n_classes):
         indices = (labels == i).nonzero().squeeze(1)
         class_points = points[indices]
-        n_points = torch.tensor(class_points.shape[0], dtype=dtype)
 
         means[i] = torch.mean(class_points, dim=0)
 
@@ -76,7 +75,6 @@ def oas_covariance(points, assume_centered=False):
            IEEE Transactions on Signal Processing, 58(10), 5016-5029, 2010.
            <0907.4698>`
     """
-    dtype = points.dtype
     n_samples = points.shape[0]
     n_dim = points.shape[1]
 
@@ -115,7 +113,6 @@ def sample_covariance(points, assume_centered=False):
         Sample covariance matrix of the points.
     """
     n_points, n_dim = points.shape
-    dtype = points.dtype
 
     if assume_centered:
         cov = torch.einsum('ij,ik->jk', points, points) / n_points
