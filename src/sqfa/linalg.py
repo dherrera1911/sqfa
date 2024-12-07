@@ -2,8 +2,14 @@
 
 import torch
 
-__all__ = ["conjugate_matrix", "generalized_eigenvalues", "generalized_eigenvectors", "spd_sqrt",
-           "spd_log", "spd_inv_sqrt"]
+__all__ = [
+    "conjugate_matrix",
+    "generalized_eigenvalues",
+    "generalized_eigenvectors",
+    "spd_sqrt",
+    "spd_log",
+    "spd_inv_sqrt",
+]
 
 
 def __dir__():
@@ -34,7 +40,7 @@ def conjugate_matrix(A, B):
     # Use einsum
     C = torch.einsum("...ij,njk,...kl->n...il", B, A, B.transpose(-2, -1))
     # Use matmul
-    #C = B[None, ...] @ A[:, None, ...] @ B.transpose(-2, -1)[None, ...]
+    # C = B[None, ...] @ A[:, None, ...] @ B.transpose(-2, -1)[None, ...]
     squeeze_dim = (0) if B.dim() == 2 else (0, 1)
     return torch.squeeze(C, dim=squeeze_dim)
 
@@ -102,10 +108,14 @@ def generalized_eigenvectors(A, B):
     eigenvalues = eigenvalues.flip(-1)
 
     # Transform eigenvectors back to the original basis
-    eigenvectors = torch.einsum("bij,abjk->abik", B_inv_sqrt.transpose(-2,-1), eigenvectors)
+    eigenvectors = torch.einsum(
+        "bij,abjk->abik", B_inv_sqrt.transpose(-2, -1), eigenvectors
+    )
     eigenvectors = eigenvectors / torch.linalg.norm(eigenvectors, dim=-2, keepdim=True)
 
-    return torch.squeeze(eigenvectors, dim=(0,1)), torch.squeeze(eigenvalues, dim=(0,1))
+    return torch.squeeze(eigenvectors, dim=(0, 1)), torch.squeeze(
+        eigenvalues, dim=(0, 1)
+    )
 
 
 def spd_sqrt(M):

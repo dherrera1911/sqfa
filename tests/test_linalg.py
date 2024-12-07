@@ -16,6 +16,7 @@ from sqfa.linalg import (
 
 torch.set_default_dtype(torch.float64)
 
+
 def generalized_eigenvalues_ref(A, B):
     """
     Compute the generalized eigenvalues of the pair (A, B) using scipy.
@@ -45,7 +46,7 @@ def generalized_eigenvalues_ref(A, B):
     for i in range(n_matrices_A):
         for j in range(n_matrices_B):
             eigvals[i, j] = torch.as_tensor(
-              scipy.linalg.eigvals(A[i], B[j]),
+                scipy.linalg.eigvals(A[i], B[j]),
             ).abs()
 
     eigvals = torch.sort(eigvals, axis=-1, descending=True)[0]
@@ -255,8 +256,8 @@ def test_generalized_eigenvectors(
     eigvecs, eigvals = generalized_eigenvectors(A, B)
     eigvecs_ref = generalized_eigenvectors_ref(A, B)
     eigvecs_ref = eigvecs_ref
-    assert (
-      torch.allclose(torch.abs(eigvecs), torch.abs(eigvecs_ref), atol=1e-4)
+    assert torch.allclose(
+        torch.abs(eigvecs), torch.abs(eigvecs_ref), atol=1e-4
     ), "Generalized eigenvectors are not correct."
 
 
@@ -311,9 +312,7 @@ def test_conjugate_matrix(
 @pytest.mark.parametrize("n_dim", [2, 4])
 @pytest.mark.parametrize("n_matrices_A", [1, 4])
 @pytest.mark.parametrize("n_matrices_B", [1])
-def test_spd_inv_sqrt(
-    sample_spd_matrices, n_dim, n_matrices_A, n_matrices_B
-):
+def test_spd_inv_sqrt(sample_spd_matrices, n_dim, n_matrices_A, n_matrices_B):
     """Test the conjugate_matrix function."""
     A, B = sample_spd_matrices
 
@@ -327,9 +326,9 @@ def test_spd_inv_sqrt(
         A_conjugate = A_conjugate[i, i]
         identity = identity.unsqueeze(0).repeat(n_matrices_A, 1, 1)
 
-    assert torch.allclose(A_conjugate, identity, atol=1e-5), (
-      "Inverse square root is not correct."
-    )
+    assert torch.allclose(
+        A_conjugate, identity, atol=1e-5
+    ), "Inverse square root is not correct."
 
 
 @pytest.mark.parametrize("n_dim", [2, 4, 17])
@@ -387,6 +386,4 @@ def test_spd_log(sample_spd_matrices, n_matrices_A, n_matrices_B, n_dim):
             log_A.shape[-1] == n_dim
         ), "spd_log() output does not match the dimension of the matrices."
 
-    assert torch.allclose(
-        log_A, log_A_ref, atol=1e-4
-    ), "SPD log is not correct."
+    assert torch.allclose(log_A, log_A_ref, atol=1e-4), "SPD log is not correct."

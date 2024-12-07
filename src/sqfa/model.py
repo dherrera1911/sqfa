@@ -194,13 +194,13 @@ class SQFA(nn.Module):
 
         if not pairwise:
             loss, training_time = fitting_loop(
-              model=self,
-              data_scatters=data_scatters,
-              max_epochs=max_epochs,
-              lr=lr,
-              show_progress=show_progress,
-              return_loss=True,
-              **kwargs
+                model=self,
+                data_scatters=data_scatters,
+                max_epochs=max_epochs,
+                lr=lr,
+                show_progress=show_progress,
+                return_loss=True,
+                **kwargs,
             )
 
         else:
@@ -232,13 +232,13 @@ class SQFA(nn.Module):
 
                 # Train the current pair
                 loss_pair, training_time = fitting_loop(
-                  model=self,
-                  data_scatters=data_scatters,
-                  max_epochs=max_epochs,
-                  lr=lr,
-                  show_progress=show_progress,
-                  return_loss=True,
-                  **kwargs
+                    model=self,
+                    data_scatters=data_scatters,
+                    max_epochs=max_epochs,
+                    lr=lr,
+                    show_progress=show_progress,
+                    return_loss=True,
+                    **kwargs,
                 )
 
                 # Remove fixed filter parametrization

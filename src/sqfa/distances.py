@@ -7,13 +7,20 @@ from .linalg import (
     spd_log,
 )
 
-__all__ = ["affine_invariant_sq", "affine_invariant", "log_euclidean_sq", "log_euclidean"]
+__all__ = [
+    "affine_invariant_sq",
+    "affine_invariant",
+    "log_euclidean_sq",
+    "log_euclidean",
+]
 
 
 def __dir__():
     return __all__
 
-EPSILON = 1e-6 # Value added inside of square roots
+
+EPSILON = 1e-6  # Value added inside of square roots
+
 
 def affine_invariant_sq(A, B):
     """

@@ -98,18 +98,19 @@ def fitting_loop(
     prev_loss = 0.0
     consecutive_stopping_criteria_met = 0
 
-    for e in tqdm(range(max_epochs), desc="Epochs", unit="epoch", disable=not show_progress):
-
+    for e in tqdm(
+        range(max_epochs), desc="Epochs", unit="epoch", disable=not show_progress
+    ):
         epoch_loss = optimizer.step(closure)
         epoch_time = time.time() - total_start_time
 
         loss_change = abs(prev_loss - epoch_loss.item())
 
         # Update tqdm bar description with loss change and total time
-        #tqdm.write(
+        # tqdm.write(
         #    f"Epoch {e+1}/{epochs}, Loss: {epoch_loss.item():.4f}, "
         #    f"Change: {loss_change:.4f}, Time: {epoch_time:.2f}s"
-        #)
+        # )
 
         # Check if loss change is below atol
         if loss_change < atol:
@@ -129,8 +130,10 @@ def fitting_loop(
             break
 
     else:  # Executes if no break occurs
-        print(f"Reached max_epochs ({max_epochs}) without meeting stopping criteria." + \
-              "Consider increasing max_epochs, changing initialization or using dtype=torch.float64.")
+        print(
+            f"Reached max_epochs ({max_epochs}) without meeting stopping criteria."
+            + "Consider increasing max_epochs, changing initialization or using dtype=torch.float64."
+        )
 
     if return_loss:
         return torch.tensor(loss_list), torch.tensor(training_time)

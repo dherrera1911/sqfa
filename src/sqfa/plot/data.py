@@ -1,4 +1,5 @@
 """Scatter data of different classes with color code."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -7,8 +8,15 @@ from .colors import get_class_rgba, get_normalized_color_map
 
 
 def scatter_data(
-    data, labels, ax=None, values=None, dim_pair=(0, 1), n_points=1000,
-    classes_plot=None, legend_type='none', **kwargs
+    data,
+    labels,
+    ax=None,
+    values=None,
+    dim_pair=(0, 1),
+    n_points=1000,
+    classes_plot=None,
+    legend_type="none",
+    **kwargs,
 ):
     """
     Plot scatter of the data to different categories.
@@ -64,13 +72,13 @@ def scatter_data(
     ax.set_xlabel(f"Dimension {dim_pair[0] + 1}")
     ax.set_ylabel(f"Dimension {dim_pair[1] + 1}")
 
-    if legend_type == 'continuous':
+    if legend_type == "continuous":
         color_map, norm = get_normalized_color_map(color_map, values)
         sm = plt.cm.ScalarMappable(cmap=color_map, norm=norm)
         sm.set_array([])
         plt.colorbar(sm, ax=ax, **kwargs)
 
-    elif legend_type == 'discrete':
+    elif legend_type == "discrete":
         for _, class_ind in enumerate(np.unique(labels)):
             ax.scatter([], [], c=[class_colors[class_ind]], label=values[class_ind])
         ax.legend(**kwargs)

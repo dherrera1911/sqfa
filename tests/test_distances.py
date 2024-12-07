@@ -11,6 +11,7 @@ from sqfa.distances import (
 
 torch.set_default_dtype(torch.float64)
 
+
 @pytest.fixture(scope="function")
 def sample_spd_matrices(n_matrices_A, n_dim):
     """Generate a tensor of SPD matrices."""
@@ -24,6 +25,7 @@ def get_diag(A):
         return A.diagonal(dim1=-2, dim2=-1)
     else:
         return A
+
 
 @pytest.mark.parametrize("n_matrices_A", [1, 4, 8])
 @pytest.mark.parametrize("n_dim", [2, 4, 6])
@@ -53,7 +55,6 @@ def test_distance_sq(sample_spd_matrices, n_matrices_A, n_dim):
     assert torch.allclose(
         ai_distances_sq, ai_distances_inv_sq, atol=1e-5
     ), "The affine invariant distance is not invariant to inversion."
-
 
     le_distances_sq = log_euclidean_sq(A, A)
 

@@ -44,7 +44,7 @@ def class_statistics(points, labels, estimator="empirical"):
         elif estimator == "oas":
             cov_i = oas_covariance(class_points)
         covariances[i] = torch.as_tensor(cov_i, dtype=dtype)
-        second_moments[i] = covariances[i] + torch.einsum('i,j->ij', means[i], means[i])
+        second_moments[i] = covariances[i] + torch.einsum("i,j->ij", means[i], means[i])
 
     statistics_dict = {
         "means": means,
@@ -82,11 +82,9 @@ def oas_covariance(points, assume_centered=False):
 
     # Compute the OAS shrinkage parameter
     tr_cov = torch.trace(sample_cov)
-    tr_prod = torch.sum(sample_cov ** 2)
-    shrinkage = (
-      (1 - 2 / n_dim) * tr_prod + tr_cov ** 2
-    ) / (
-      (n_samples + 1 - 2 / n_dim) * (tr_prod - tr_cov ** 2 / n_dim)
+    tr_prod = torch.sum(sample_cov**2)
+    shrinkage = ((1 - 2 / n_dim) * tr_prod + tr_cov**2) / (
+        (n_samples + 1 - 2 / n_dim) * (tr_prod - tr_cov**2 / n_dim)
     )
     shrinkage = min(1.0, shrinkage)
 
@@ -115,10 +113,12 @@ def sample_covariance(points, assume_centered=False):
     n_points, n_dim = points.shape
 
     if assume_centered:
-        cov = torch.einsum('ij,ik->jk', points, points) / n_points
+        cov = torch.einsum("ij,ik->jk", points, points) / n_points
     else:
         mean = torch.mean(points, dim=0)
         centered_points = points - mean
-        cov = torch.einsum('ij,ik->jk', centered_points, centered_points) / (n_points - 1)
+        cov = torch.einsum("ij,ik->jk", centered_points, centered_points) / (
+            n_points - 1
+        )
 
     return cov

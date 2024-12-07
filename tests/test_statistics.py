@@ -12,8 +12,16 @@ def test_class_statistics():
     y = torch.randint(0, 3, (n_points,))
     class_stats = class_statistics(X, y, estimator="empirical")
     assert class_stats["means"].shape == (3, 4), "Means have incorrect shape."
-    assert class_stats["covariances"].shape == (3, 4, 4), "Covariances have incorrect shape."
-    assert class_stats["second_moments"].shape == (3, 4, 4), "Covariances have incorrect shape."
+    assert class_stats["covariances"].shape == (
+        3,
+        4,
+        4,
+    ), "Covariances have incorrect shape."
+    assert class_stats["second_moments"].shape == (
+        3,
+        4,
+        4,
+    ), "Covariances have incorrect shape."
 
     assert torch.allclose(
         class_stats["means"], torch.ones(3, 4), atol=1e-6

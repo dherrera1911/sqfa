@@ -1,4 +1,5 @@
 """Plot ellipses."""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -44,8 +45,15 @@ def single_ellipse(covariance, ax, center=None, color="black"):
 
 
 def statistics_ellipses(
-    ellipses, centers=None, dim_pair=(0, 1), ax=None, values=None,
-    classes_plot=None, color_map="viridis", legend_type='none', **kwargs
+    ellipses,
+    centers=None,
+    dim_pair=(0, 1),
+    ax=None,
+    values=None,
+    classes_plot=None,
+    color_map="viridis",
+    legend_type="none",
+    **kwargs,
 ):
     """
     Plot the ellipses of the filter response statistics across classes.
@@ -95,9 +103,7 @@ def statistics_ellipses(
 
     class_colors = get_class_rgba(color_map, values)
 
-    centers_subset, ellipses_subset = statistics_dim_subset(
-        centers, ellipses, dim_pair
-    )
+    centers_subset, ellipses_subset = statistics_dim_subset(centers, ellipses, dim_pair)
 
     for _, ind in enumerate(classes_plot):
         single_ellipse(
@@ -111,13 +117,13 @@ def statistics_ellipses(
     ax.set_xlabel(f"Dimension {dim_pair[0] + 1}")
     ax.set_ylabel(f"Dimension {dim_pair[1] + 1}")
 
-    if legend_type == 'continuous':
+    if legend_type == "continuous":
         color_map, norm = get_normalized_color_map(color_map, values)
         sm = plt.cm.ScalarMappable(cmap=color_map, norm=norm)
         sm.set_array([])
         plt.colorbar(sm, ax=ax, **kwargs)
 
-    elif legend_type == 'discrete':
+    elif legend_type == "discrete":
         for _, ind in enumerate(classes_plot):
             ax.scatter([], [], c=[class_colors[ind]], label=values[ind])
         ax.legend(**kwargs)

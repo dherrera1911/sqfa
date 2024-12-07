@@ -11,9 +11,10 @@ def make_orthogonal_matrices(n_matrices, n_dim):
     orthogonal = torch.matrix_exp(skew_sym)
     return orthogonal
 
+
 def sample_spd(n_matrices, n_dim):
     """Generate random SPD matrices."""
     eigvals = 2 * (torch.rand(n_matrices, n_dim)) ** 2 + 0.01
     eigvecs = make_orthogonal_matrices(n_matrices, n_dim)
-    spd = torch.einsum('ijk,ik,ikl->ijl', eigvecs, eigvals, eigvecs.transpose(1, 2))
+    spd = torch.einsum("ijk,ik,ikl->ijl", eigvecs, eigvals, eigvecs.transpose(1, 2))
     return torch.squeeze(spd)

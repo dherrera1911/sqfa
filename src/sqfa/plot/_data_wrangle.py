@@ -19,7 +19,7 @@ def statistics_dim_subset(means, covariances, keep_inds):
     means : torch.Tensor
         Means of the data. (n_classes, n_dim)
     covariances : torch.Tensor
-        Covariances of the data. (n_classes, n_dim, n_dim) 
+        Covariances of the data. (n_classes, n_dim, n_dim)
     keep_inds : torch.Tensor
         Indices of the dimensions to keep. (n_keep_dim,)
 
@@ -95,6 +95,10 @@ def subsample_classes(points, labels, classes_to_keep=None):
     if classes_to_keep is None:
         return points, labels
     else:
-        subsampled_points = points[torch.tensor([label in classes_to_keep for label in labels])]
-        subsampled_labels = labels[torch.tensor([label in classes_to_keep for label in labels])]
+        subsampled_points = points[
+            torch.tensor([label in classes_to_keep for label in labels])
+        ]
+        subsampled_labels = labels[
+            torch.tensor([label in classes_to_keep for label in labels])
+        ]
         return subsampled_points, subsampled_labels
