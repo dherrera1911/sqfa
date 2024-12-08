@@ -33,7 +33,7 @@ def check_distances_valid(distances):
 def fitting_loop(
     model,
     data_scatters,
-    max_epochs=50,
+    max_epochs=200,
     lr=0.1,
     atol=1e-6,
     show_progress=True,

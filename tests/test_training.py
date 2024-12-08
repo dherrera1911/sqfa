@@ -24,7 +24,7 @@ def test_training_function(make_dataset):
 
     model = sqfa.model.SQFA(
         n_dim=covariances.shape[-1],
-        feature_noise=0.01,
+        feature_noise=0.001,
         n_filters=2,
     )
 
@@ -34,6 +34,7 @@ def test_training_function(make_dataset):
         lr=0.1,
         return_loss=True,
         max_epochs=MAX_EPOCHS,
+        show_progress=False,
     )
 
     assert loss[-1] is not torch.nan, "Loss is NaN"

@@ -75,7 +75,7 @@ def rotated_classes_dataset():
 
     class_covariances = base_cov
     for d in range(len(angles)):
-        ang = torch.tensor(angles[d])
+        ang = torch.as_tensor(angles[d])
         class_covariances = rotate_classes(
             class_covariances, ang, dims=[2 * d, 2 * d + 1]
         )
