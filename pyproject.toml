@@ -1,6 +1,6 @@
 [project]
 name = "sqfa"
-requires-python = ">= 3.7"
+requires-python = ">= 3.8"
 dynamic = ["version"]
 authors = [
   {name = "Daniel Herrera-Esposito", email = "dherrera1911@gmail.com"}
