@@ -5,7 +5,6 @@ import pytest
 import torch
 
 import sqfa
-
 from make_examples import rotated_classes_dataset
 
 MAX_EPOCHS = 100
