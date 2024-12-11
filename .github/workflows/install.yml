@@ -1,4 +1,4 @@
-name: Run Tests
+name: Test Installation
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   pull_request:
 
 jobs:
-  test:
+  install:
     runs-on: ubuntu-latest
 
     strategy:
@@ -23,10 +23,8 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install dependencies
+    - name: Test installation
       run: |
         python -m pip install --upgrade pip
-        pip install .[test]
-
-    - name: Run tests
-      run: pytest
+        pip install .
+        python -c "import sqfa"
