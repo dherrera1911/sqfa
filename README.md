@@ -1,5 +1,13 @@
 # SQFA
 
+[![Build Status](https://github.com/dherrera1911/sqfa/actions/workflows/install.yml/badge.svg)](https://github.com/dherrera1911/sqfa/actions/workflows/install.yml)
+[![Tests Status](https://github.com/dherrera1911/sqfa/actions/workflows/tests.yml/badge.svg)](https://github.com/dherrera1911/sqfa/actions/workflows/tests.yml)
+[![Documentation Status](https://readthedocs.org/projects/sqfa/badge/?version=latest)](https://sqfa.readthedocs.io/en/latest/?badge=latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/dherrera1911/sqfa?tab=MIT-1-ov-file)
+![Python version](https://img.shields.io/badge/python-3.9|3.10|3.11|3.12-blue.svg)
+
+
+
 Supervised Quadratic Feature Analysis (SQFA) is a supervised dimensionality
 reduction technique. It learns a set of linear features that
 maximize the differences in second-order statistics between
