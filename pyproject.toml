@@ -8,13 +8,22 @@ authors = [
 description = "Supervised Quadratic Feature Analysis: Task specific second order feature extraction"
 readme = "README.md"
 license = {text = "MIT License"}
-dependencies = [
-  "numpy>=1.1",
-  "torch>=1.8",
-  "matplotlib",
-  "tqdm>=4.29",
+
+dependencies = ["numpy>=1.1", "torch>=1.8", "matplotlib", "tqdm>=4.29"]
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Science/Research",
 ]
-keywords = ['covariance matrices', 'second moments', 'dimensionality reduction', 'machine learning', 'manifold', 'pytorch', 'information geometry']
+
+keywords = ['covariance matrices', 'second moments', 'dimensionality reduction',
+'machine learning', 'manifold', 'pytorch', 'information geometry']
 
 
 [project.optional-dependencies]
