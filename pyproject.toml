@@ -72,6 +72,7 @@ build-backend = "setuptools.build_meta"
 [project.urls]
 Repository = "https://github.com/dherrera1911/sqfa"
 Source = "https://github.com/dherrera1911/sqfa"
+"Bug Reports" = "https://github.com/dherrera1911/sqfa/issues"
 Documentation = "https://sqfa.readthedocs.io/en/latest/"
 
 
