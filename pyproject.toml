@@ -77,6 +77,7 @@ Documentation = "https://sqfa.readthedocs.io/en/latest/"
 
 [tool.hatch.version]
 source = "vcs"
+style = "pep440-pre"  # or another style that doesn't produce local versions
 
 
 [tool.pytest.ini_options]
