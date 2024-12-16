@@ -70,7 +70,7 @@ jobs:
           path: dist/
       - name: Publish package to TestPyPI
         # Only publish to real PyPI on release
-        if: github.event_name == 'release'
+        #if: github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository_url: https://test.pypi.org/legacy/
