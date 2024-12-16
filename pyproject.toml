@@ -1,7 +1,11 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
 [project]
 name = "sqfa"
-requires-python = ">= 3.8"
 dynamic = ["version"]
+requires-python = ">= 3.8"
 authors = [
   {name = "Daniel Herrera-Esposito", email = "dherrera1911@gmail.com"}
 ]
@@ -64,16 +68,15 @@ test = [
     'scipy',
 ]
 
-[build-system]
-requires = ["setuptools >= 61.0", "setuptools-scm[toml]"]
-build-backend = "setuptools.build_meta"
-
-
 [project.urls]
 Repository = "https://github.com/dherrera1911/sqfa"
 Source = "https://github.com/dherrera1911/sqfa"
 "Bug Reports" = "https://github.com/dherrera1911/sqfa/issues"
 Documentation = "https://sqfa.readthedocs.io/en/latest/"
+
+
+[tool.hatch.version]
+source = "vcs"
 
 
 [tool.pytest.ini_options]
@@ -83,20 +86,6 @@ testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-
-#[tool.setuptools]
-#include-package-data = true
-#
-#
-#[tool.setuptools.package-data]
-#amatorch = ["datasets/disparity/*.csv"]
-
-
-[tool.setuptools_scm]
-write_to = "src/sqfa/version.py"
-version_scheme = 'python-simplified-semver'
-local_scheme = 'no-local-version'
 
 
 [tool.ruff]
