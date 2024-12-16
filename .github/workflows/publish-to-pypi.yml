@@ -50,7 +50,7 @@ jobs:
           name: python-package-distributions
           path: dist/
   publish:
-    name: Publish Python 🐍 distribution 📦 to TestPyPI
+    name: Publish Python 🐍 distribution 📦 to PyPI
     if: github.repository_owner == 'dherrera1911'
     needs:
       - build
@@ -58,7 +58,7 @@ jobs:
     # This is the trusted environment. Notice that it's called pypi
     # that is the name that you will use in your pypi configuration
     environment:
-      name: testpypi
+      name: pypi
     permissions:
       id-token: write  # this permission is mandatory for pypi publishing
     steps:
@@ -68,7 +68,7 @@ jobs:
         with:
           name: python-package-distributions
           path: dist/
-      - name: Publish package to TestPyPI
+      - name: Publish package to PyPI
         # Only publish to real PyPI on release
         #if: github.event_name == 'release'
         uses: pypa/gh-action-pypi-publish@release/v1
