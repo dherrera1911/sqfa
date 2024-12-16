@@ -1,0 +1,76 @@
+name: Publish to PyPI
+on:
+  release:
+    types: [published]
+  push:
+    branches:
+      - main
+jobs:
+  # setup build separate from publish
+  # See https://github.com/pypa/gh-action-pypi-publish/issues/217#issuecomment-1965727093
+  build:
+    runs-on: ubuntu-latest
+    # This ensures that the publish action only runs in the main repository
+    # rather than on any forks of your repo. You only should publish from the
+    # main repository
+    # Environment is encouraged but not required. The build step of this action
+    # Only builds your package's sdist and wheel
+    environment: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # This fetch element is only important if you are use SCM based
+          # versioning (that looks at git tags to gather the version)
+          fetch-depth: 100
+
+      # Need the tags so that setuptools-scm can form a valid version number
+      - name: Fetch git tags
+        run: git fetch origin 'refs/tags/*:refs/tags/*'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install Hatch
+        run: |
+          pipx install hatch
+          pip list
+
+      - name: Build package using Hatch
+        run: |
+          hatch build
+          echo ""
+          echo "Generated files:"
+          ls -lh dist/
+      # Store an artifact of the build to use in the publish step below
+      - name: Store the distribution packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+  publish:
+    name: Publish Python 🐍 distribution 📦 to TestPyPI
+    if: github.repository_owner == 'dherrera1911'
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    # This is the trusted environment. Notice that it's called pypi
+    # that is the name that you will use in your pypi configuration
+    environment:
+      name: testpypi
+    permissions:
+      id-token: write  # this permission is mandatory for pypi publishing
+    steps:
+      # Version 4 doesn't support GitHub enterprise yet
+      - name: Download all the dists
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+      - name: Publish package to TestPyPI
+        # Only publish to real PyPI on release
+        if: github.event_name == 'release'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository_url: https://test.pypi.org/legacy/
