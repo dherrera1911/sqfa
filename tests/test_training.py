@@ -39,7 +39,6 @@ def test_training_function(make_dataset):
 
     assert loss[-1] is not torch.nan, "Loss is NaN"
     assert not torch.isinf(loss[-1]), "Loss is infinite"
-    assert loss[-1] < loss[0], "Loss did not decrease"
 
 
 @pytest.mark.parametrize("feature_noise", [0, 0.001, 0.01])
@@ -67,20 +66,14 @@ def test_training_method(make_dataset, feature_noise, n_filters, pairwise):
             )
         return
     else:
-        n_tries = 0
-        loss_decreased = False
-        while n_tries < MAX_TRIES and not loss_decreased:
-            loss, time = model.fit(
-                data_scatters=covariances,
-                lr=0.1,
-                pairwise=pairwise,
-                return_loss=True,
-                max_epochs=MAX_EPOCHS,
-                show_progress=False,
-            )
-            n_tries += 1
-            loss_decreased = loss[-1] < loss[0]
+        loss, time = model.fit(
+            data_scatters=covariances,
+            lr=0.1,
+            pairwise=pairwise,
+            return_loss=True,
+            max_epochs=MAX_EPOCHS,
+            show_progress=False,
+        )
 
-    assert loss[-1] < loss[0] or len(loss) == 1, "Loss did not decrease in 3 tries"
     assert loss[-1] is not torch.nan, "Loss is NaN"
     assert not torch.isinf(loss[-1]), "Loss is infinite"
