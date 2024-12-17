@@ -86,7 +86,8 @@ class SQFA(nn.Module):
         Parameters
         ----------
         data_scatters : torch.Tensor
-            Tensor of shape (n_classes, n_dim, n_dim).
+            Tensor of shape (n_classes, n_dim, n_dim), with second
+            moment or covariance matrices.
 
         Returns
         -------
@@ -104,7 +105,8 @@ class SQFA(nn.Module):
         Parameters
         ----------
         data_scatters : torch.Tensor
-            Tensor of shape (n_classes, n_dim, n_dim).
+            Tensor of shape (n_classes, n_dim, n_dim), with second
+            moment or covariance matrices.
         regularized : bool
             If True, regularize the distances by adding a small value to the
             diagonal of the transformed scatter matrices. Default is False.
