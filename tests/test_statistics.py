@@ -3,8 +3,8 @@
 import pytest
 import torch
 
-from sqfa.statistics import class_statistics, pca, pca_from_scatter
 from make_examples import rotated_classes_dataset
+from sqfa.statistics import class_statistics, pca, pca_from_scatter
 
 
 @pytest.fixture(scope="function")
@@ -55,7 +55,6 @@ def test_class_statistics():
 @pytest.mark.parametrize("n_components", [None, 2, 4])
 def test_pca_points(make_pca_points, n_points, n_dim, n_components):
     """Test PCA on a dataset of n_points with n_dims."""
-
     points = make_pca_points
 
     # Check that error is raised if n_components > n_dim
@@ -79,7 +78,6 @@ def test_pca_points(make_pca_points, n_points, n_dim, n_components):
 @pytest.mark.parametrize("n_components", [None, 2, 4, 10])
 def test_pca_scatters(make_dataset, n_components):
     """Test PCA on a dataset of n_points with n_dims."""
-
     class_covariances = make_dataset
 
     if n_components is not None and n_components > class_covariances.shape[-1]:
