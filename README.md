@@ -12,20 +12,15 @@
 Supervised Quadratic Feature Analysis (SQFA) is a supervised dimensionality
 reduction technique. It learns a set of linear features that
 maximize the differences in second-order statistics between
-classes. The `sqfa` package provides an implementation of the SQFA algorithm in PyTorch.
+classes. The `sqfa` package implements SQFA.
 
-SQFA uses a geometric loss on the class-specific second moment matrices,
-considered as points in the SPD manifold. Intuitively, the distance between
-the SPD matrices of different classes is a measure of their second-order
-dissimilarity. SQFA finds the features that maximize this distance.
-
-For detailed information on the method, see the
+For detailed information on the method and the package, see the
 [sqfa package tutorials](https://sqfa.readthedocs.io/en/latest/tutorials/spd_geometry.html).
 
 ## Overview
 
-The `sqfa` package provides a class `SQFA` that can be used to train the
-model. The class has an API similar to that of `sklearn` models.
+The package provides the class `SQFA` that can be used to train the
+model. The class has an API similar to `sklearn`.
 An example of how to use the `SQFA` class is shown below:
 
 ```python
@@ -65,8 +60,6 @@ model.fit(data_scatters=data_stats["second_moments"])
 x_transformed = model.transform(x).detach()
 ```
 
-See the tutorials for more details on the model usage and behavior.
-
 ## Installation
 
 ### Virtual environment
@@ -74,7 +67,7 @@ See the tutorials for more details on the model usage and behavior.
 We recommend installing the package in a virtual environment. For this,
 you can first install `miniconda` 
 ([install instructions link](https://docs.anaconda.com/miniconda/install/#quick-command-line-install)),
-and then create a virtual environment with Python 3.11 with the following
+and then create a virtual environment with Python 3.11 using the following
 shell command:
 
 ```bash
@@ -92,15 +85,15 @@ time you want to use it.
 
 ### Install package from PyPI
 
-You can conveniently install `sqfa` from PyPI with `pip`. To install
-the dependencies needed to also run the tutorials, you can use the
-following command:
+The easiest way to install the package is form the PyPI
+repository. To install the package and the dependencies
+needed to run the tutorials, use the following command:
 
 ```bash
 pip install sqfa[dev]
 ```
 
-If you want to install the lighter version without the tutorials dependencies,
+To install the lighter version without the tutorials dependencies, use
 
 ```bash
 pip install sqfa
@@ -108,8 +101,8 @@ pip install sqfa
 
 ### Install package from source
 
-You can also install the package from source (e.g., if you want to modify
-the code). To do this, you can clone the repository and install the package
+To install the package from source (e.g., if you want to modify the
+code), you can clone the repository and install the package
 in editable mode with the following commands:
 
 ```bash
@@ -117,8 +110,3 @@ git clone git@github.com:dherrera1911/sqfa.git
 cd sqfa
 pip install -e .[dev]
 ```
-
-The first command clones the repository, the second command moves to the
-repository directory, and the third command installs the package in
-editable mode. If you want to install the dependencies needed to run
-the tutorials, you should substitute the last command with the following.
