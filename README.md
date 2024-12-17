@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/dherrera1911/sqfa?tab=MIT-1-ov-file)
 ![Python version](https://img.shields.io/badge/python-3.9|3.10|3.11|3.12-blue.svg)
 [![codecov](https://codecov.io/gh/dherrera1911/sqfa/graph/badge.svg?token=NN44R5G18I)](https://codecov.io/gh/dherrera1911/sqfa)
+[![PyPI version](https://badge.fury.io/py/sqfa.svg)](https://badge.fury.io/py/sqfa)
 
 
 Supervised Quadratic Feature Analysis (SQFA) is a supervised dimensionality
@@ -89,22 +90,35 @@ conda activate my-sqfa
 You should activate the `my-sqfa` environment to install the package, and every
 time you want to use it.
 
-### Install package
+### Install package from PyPI
 
-You can install `sqfa` with `pip` by running the following commands in
-the shell:
+You can conveniently install `sqfa` from PyPI with `pip`. To install
+the dependencies needed to also run the tutorials, you can use the
+following command:
+
+```bash
+pip install sqfa[dev]
+```
+
+If you want to install the lighter version without the tutorials dependencies,
+
+```bash
+pip install sqfa
+```
+
+### Install package from source
+
+You can also install the package from source (e.g., if you want to modify
+the code). To do this, you can clone the repository and install the package
+in editable mode with the following commands:
 
 ```bash
 git clone git@github.com:dherrera1911/sqfa.git
 cd sqfa
-pip install -e .
+pip install -e .[dev]
 ```
 
 The first command clones the repository, the second command moves to the
 repository directory, and the third command installs the package in
 editable mode. If you want to install the dependencies needed to run
-the tutorials, you should substitute the last command with the following:
-
-```bash
-pip install -e .[dev]
-```
+the tutorials, you should substitute the last command with the following.
