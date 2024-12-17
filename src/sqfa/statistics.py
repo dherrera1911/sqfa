@@ -2,7 +2,7 @@
 
 import torch
 
-__all__ = ["class_statistics", "oas_covariance"]
+__all__ = ["class_statistics", "oas_covariance", "pca", "pca_from_scatter"]
 
 
 def class_statistics(points, labels, estimator="empirical"):
@@ -65,7 +65,7 @@ def oas_covariance(points, assume_centered=False):
 
     Returns
     -------
-    cov : torch.Tensor
+    oas_covariance : torch.Tensor
         OAS covariance matrix of the points.
 
     References
@@ -90,8 +90,8 @@ def oas_covariance(points, assume_centered=False):
 
     # Compute the OAS covariance matrix
     target = torch.eye(n_dim) * torch.trace(sample_cov) / n_dim
-    oas_cov = (1 - shrinkage) * sample_cov + shrinkage * target
-    return oas_cov
+    oas_covariance = (1 - shrinkage) * sample_cov + shrinkage * target
+    return oas_covariance
 
 
 def sample_covariance(points, assume_centered=False):
@@ -107,18 +107,86 @@ def sample_covariance(points, assume_centered=False):
 
     Returns
     -------
-    cov : torch.Tensor
+    covariance : torch.Tensor
         Sample covariance matrix of the points.
     """
     n_points, n_dim = points.shape
 
     if assume_centered:
-        cov = torch.einsum("ij,ik->jk", points, points) / n_points
+        covariance = torch.einsum("ij,ik->jk", points, points) / n_points
     else:
         mean = torch.mean(points, dim=0)
         centered_points = points - mean
-        cov = torch.einsum("ij,ik->jk", centered_points, centered_points) / (
+        covariance = torch.einsum("ij,ik->jk", centered_points, centered_points) / (
             n_points - 1
         )
 
-    return cov
+    return covariance
+
+
+def pca(points, n_components=None):
+    """
+    Compute the principal components of the given points.
+
+    Parameters
+    ----------
+    points : torch.Tensor
+        Data points with shape (n_points, n_dim).
+    n_components : int
+        Number of principal components to compute. Default is
+        min(n_points, n_dim).
+
+    Returns
+    -------
+    components : torch.Tensor
+        Principal components of the points. (n_components, n_dim)
+    """
+    n_points, n_dim = points.shape
+
+    if n_components is None:
+        n_components = min(n_points, n_dim)
+
+    if n_components > n_dim:
+        raise ValueError("n_components must be less than or equal to n_dim.")
+
+    covariance = sample_covariance(points)
+
+    # Compute the eigendecomposition of the covariance matrix
+    eigenvalues, components = torch.linalg.eigh(covariance)
+
+    components = components[:, -n_components:]
+    components = torch.flip(components, dims=[1]).T
+
+    return components
+
+
+def pca_from_scatter(scatters, n_components=None):
+    """
+    Compute the principal components of the given scatter matrices.
+    The scatter matrices are averaged and the principal components
+    are computed from the average scatter matrix.
+
+    Parameters
+    ----------
+    scatters : torch.Tensor
+        Scatter matrices with shape (n_classes, n_dim, n_dim).
+    n_components : int
+        Number of principal components to compute. Default is n_dim.
+
+    Returns
+    -------
+    components : torch.Tensor
+        Principal components of the scatter matrices. (n_components, n_dim)
+    """
+    n_classes, n_dim, _ = scatters.shape
+
+    if n_components is None:
+        n_components = n_dim
+
+    if n_components > n_dim:
+        raise ValueError("n_components must be less than or equal to n_dim.")
+
+    average_scatter = torch.mean(scatters, dim=0)
+    components = pca(average_scatter, n_components=n_components)
+
+    return components
