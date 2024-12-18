@@ -4,7 +4,7 @@ import pytest
 import torch
 
 import sqfa
-from make_examples import rotated_classes_dataset, make_dataset_points
+from make_examples import make_dataset_points, rotated_classes_dataset
 
 MAX_EPOCHS = 50
 N_POINTS = 100
