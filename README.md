@@ -27,37 +27,43 @@ An example of how to use the `SQFA` class is shown below:
 import sqfa
 import torchvision
 
-### Download dataset
+### DOWNLOAD DATASET
 
 trainset = torchvision.datasets.MNIST(
     root="./data", train=True, download=True
 )
-x = trainset.data.reshape(-1, 28 * 28).float()
+X = trainset.data.reshape(-1, 28 * 28).float()
 y = trainset.targets
-# Normalize x
-x = x / (x.std() * 28.0)
-x = x - x.mean(dim=0, keepdim=True)
+# Normalize X
+X = X / (X.std() * 28.0)
+X = X - X.mean(dim=0, keepdim=True)
 
-### Initialize SQFA model
+### INITIALIZE SQFA MODEL
 
 model = sqfa.model.SQFA(
-    n_dim=x.shape[-1],
+    n_dim=X.shape[-1],
     n_filters=4,
     feature_noise=0.01,
 )
 
-### Fit model. Two options:
+### FIT MODEL. TWO OPTIONS:
 
 # 1) Give data and labels as input
-model.fit(X=x, y=y)
+model.fit_pca(X) # Optional: PCA initialization to speed up convergence
+model.fit(X=X, y=y)
 
 # 2) Give scatter matrices as input
-data_stats = sqfa.statistics.class_statistics(x, y)
-model.fit(data_scatters=data_stats["second_moments"])
+data_stats = sqfa.statistics.class_statistics(X, y)
+second_moments = data_stats["second_moments"]
+model.fit_pca(data_scatters=second_moments) # Optional: PCA initialization to speed up convergence
+model.fit(data_scatters=second_moments)
 
-### Transform data to the learned feature space
+### TRANSFORM DATA AND SECOND MOMENTS TO THE LEARNED FEATURE SPACE
 
-x_transformed = model.transform(x).detach()
+X_transformed = model.transform(X).detach()
+second_moments_transformed = model.transform_scatters(
+    second_moments
+).detach()
 ```
 
 ## Installation
