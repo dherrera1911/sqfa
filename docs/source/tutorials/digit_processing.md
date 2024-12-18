@@ -122,6 +122,8 @@ sqfa_model = sqfa.model.SQFA(
   distance_fun=sqfa.distances.affine_invariant
 )
 
+sqfa_model.fit_pca(x_train) # Initialize filters with PCA
+
 sqfa_model.fit(
   x_train,
   y_train,
@@ -164,6 +166,17 @@ some local feature patterns.
 
 SQFA filters, in contrast, look smooth[^1] and capture a set of features that
 look like digits.
+
+
+:::{admonition} Filter initialization
+A good initialization of the filters can considerably speed up
+the learning process. The method `fit_pca` of the `SQFA` class
+sets the filters to the PCA components of the data. For the datasets
+used in this tutorial, training is around 10 times faster with
+PCA initialization than with random initialization, and the final
+results are similar with both initializations. 
+:::
+
 
 Lets evaluate the performance of the filters in separating the classes
 by using a quadratic classifier, Quadratic Discriminant Analysis (QDA).
@@ -297,6 +310,8 @@ sqfa_model = sqfa.model.SQFA(
   distance_fun=sqfa.distances.affine_invariant
 )
 
+sqfa_model.fit_pca(x_train) # Initialize filters with PCA
+
 sqfa_model.fit(
   x_train,
   y_train,
@@ -410,6 +425,8 @@ sqfa_model = sqfa.model.SQFA(
   feature_noise=noise,
   distance_fun=sqfa.distances.affine_invariant
 )
+
+sqfa_model.fit_pca(x_train) # Initialize filters with PCA
 
 sqfa_model.fit(
   x_train,
