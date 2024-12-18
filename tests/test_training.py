@@ -87,8 +87,12 @@ def test_pca_init_points(n_filters, feature_noise):
         n_filters=n_filters,
     )
 
+    # PCA components
+    components = sqfa.statistics.pca(points, n_components=n_filters)
     # PCA initialization
     model.fit_pca(X=points)
+
+    assert torch.allclose(model.filters.detach(), components)
 
     loss, time = model.fit(
         X=points,
@@ -115,8 +119,12 @@ def test_pca_init_scatters(n_filters, feature_noise):
         n_filters=n_filters,
     )
 
+    # PCA components
+    components = sqfa.statistics.pca_from_scatter(covariances, n_components=n_filters)
     # PCA initialization
     model.fit_pca(data_scatters=covariances)
+
+    assert torch.allclose(model.filters.detach(), components)
 
     loss, time = model.fit(
         data_scatters=covariances,
