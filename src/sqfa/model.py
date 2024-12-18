@@ -9,7 +9,7 @@ from ._optim import fitting_loop
 from .constraints import FixedFilters, Identity, Sphere
 from .distances import _matrix_subset_distance_generator, affine_invariant_sq
 from .linalg import conjugate_matrix
-from .statistics import class_statistics
+from .statistics import class_statistics, pca, pca_from_scatter
 
 __all__ = ["SQFA"]
 
@@ -140,6 +140,38 @@ class SQFA(nn.Module):
         """
         transformed_points = torch.einsum("ij,nj->ni", self.filters, data_points)
         return transformed_points
+
+
+    def fit_pca(self, X=None, data_scatters=None):
+        """
+        Fit the SQFA filters to the data using PCA. This can be used to
+        initialize the filters before training.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Input data of shape (n_samples, n_dim).
+        data_scatters : torch.Tensor
+            Tensor of shape (n_classes, n_dim, n_dim) with the second moments
+            of the data for each class. If None, then X and y must be provided.
+            Default is None.
+        """
+        if X is None and data_scatters is None:
+            raise ValueError("Either X or data_scatters must be provided.")
+        if self.filters.shape[0] > self.filters.shape[1]:
+            raise ValueError("Number of filters must be less than or equal to the data dimension.")
+
+        n_components = self.filters.shape[0]
+
+        if data_scatters is None:
+            pca_filters = pca(X, n_components)
+        else:
+            pca_filters = pca_from_scatter(data_scatters, n_components)
+
+        # Assign fitlers parameter to sqfa
+        remove_parametrizations(self, "filters")
+        self.filters = nn.Parameter(pca_filters)
+        self._add_constraint(constraint=self.constraint)
 
     def fit(
         self,
