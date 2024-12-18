@@ -4,23 +4,16 @@ import pytest
 import torch
 
 import sqfa
-from make_examples import rotated_classes_dataset
+from make_examples import rotated_classes_dataset, make_dataset_points
 
 MAX_EPOCHS = 50
-MAX_TRIES = 3
+N_POINTS = 100
 torch.manual_seed(0)
 
 
-@pytest.fixture(scope="function")
-def make_dataset():
-    """Create a dataset of 8 classes with rotated covariances."""
-    class_covariances = rotated_classes_dataset()
-    return class_covariances
-
-
-def test_training_function(make_dataset):
+def test_training_function():
     """Test the training function in sqfa._optim."""
-    covariances = make_dataset
+    covariances = rotated_classes_dataset()
 
     model = sqfa.model.SQFA(
         n_dim=covariances.shape[-1],
@@ -44,9 +37,9 @@ def test_training_function(make_dataset):
 @pytest.mark.parametrize("feature_noise", [0, 0.001, 0.01])
 @pytest.mark.parametrize("n_filters", [1, 2, 4])
 @pytest.mark.parametrize("pairwise", [False, True])
-def test_training_method(make_dataset, feature_noise, n_filters, pairwise):
+def test_training_method(feature_noise, n_filters, pairwise):
     """Test the method `.fit` in the sqfa class."""
-    covariances = make_dataset
+    covariances = rotated_classes_dataset()
 
     model = sqfa.model.SQFA(
         n_dim=covariances.shape[-1],
@@ -74,6 +67,63 @@ def test_training_method(make_dataset, feature_noise, n_filters, pairwise):
             max_epochs=MAX_EPOCHS,
             show_progress=False,
         )
+
+    assert loss[-1] is not torch.nan, "Loss is NaN"
+    assert not torch.isinf(loss[-1]), "Loss is infinite"
+
+
+@pytest.mark.parametrize("n_filters", [1, 2, 4])
+@pytest.mark.parametrize("feature_noise", [0.001])
+def test_pca_init_points(n_filters, feature_noise):
+    """Test the method `.fit` in the sqfa class."""
+    covariances = rotated_classes_dataset()
+    points, labels = make_dataset_points(n_points=N_POINTS,
+                                         class_covariances=covariances)
+
+    model = sqfa.model.SQFA(
+        n_dim=covariances.shape[-1],
+        feature_noise=feature_noise,
+        n_filters=n_filters,
+    )
+
+    # PCA initialization
+    model.fit_pca(X=points)
+
+    loss, time = model.fit(
+        X=points,
+        y=labels,
+        lr=0.1,
+        return_loss=True,
+        max_epochs=MAX_EPOCHS,
+        show_progress=False,
+    )
+
+    assert loss[-1] is not torch.nan, "Loss is NaN"
+    assert not torch.isinf(loss[-1]), "Loss is infinite"
+
+
+@pytest.mark.parametrize("n_filters", [1, 2, 4])
+@pytest.mark.parametrize("feature_noise", [0.001])
+def test_pca_init_scatters(n_filters, feature_noise):
+    """Test the method `.fit` in the sqfa class."""
+    covariances = rotated_classes_dataset()
+
+    model = sqfa.model.SQFA(
+        n_dim=covariances.shape[-1],
+        feature_noise=feature_noise,
+        n_filters=n_filters,
+    )
+
+    # PCA initialization
+    model.fit_pca(data_scatters=covariances)
+
+    loss, time = model.fit(
+        data_scatters=covariances,
+        lr=0.1,
+        return_loss=True,
+        max_epochs=MAX_EPOCHS,
+        show_progress=False,
+    )
 
     assert loss[-1] is not torch.nan, "Loss is NaN"
     assert not torch.isinf(loss[-1]), "Loss is infinite"

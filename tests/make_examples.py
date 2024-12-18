@@ -80,3 +80,23 @@ def rotated_classes_dataset():
             class_covariances, ang, dims=[2 * d, 2 * d + 1]
         )
     return class_covariances
+
+
+def make_dataset_points(n_points, class_covariances):
+    """Generate points from a dataset with n_points and n_classes."""
+    n_dim = class_covariances.shape[-1]
+    n_classes = class_covariances.shape[0]
+    for i in range(n_classes):
+        cov = class_covariances[i]
+        mean = torch.zeros(n_dim)
+        class_points = torch.distributions.MultivariateNormal(mean, cov).sample(
+            (n_points,)
+        )
+        if i == 0:
+            points = class_points
+            labels = torch.ones(n_points) * i
+        else:
+            points = torch.cat((points, class_points), 0)
+            labels = torch.cat((labels, torch.ones(n_points) * i), 0)
+
+    return points, labels
