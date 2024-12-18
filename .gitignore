@@ -2,6 +2,12 @@
 *.pyc
 *.swp
 *.swo
+*.json
 src/sqfa.egg-info
 docs/build
 docs/source/generated
+docs/source/tutorials/python_scripts
+docs/source/tutorials/data
+src/sqfa/version.py
+*.coverage.SAS*
+.github/workflows/node_modules
