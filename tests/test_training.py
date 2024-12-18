@@ -77,8 +77,9 @@ def test_training_method(feature_noise, n_filters, pairwise):
 def test_pca_init_points(n_filters, feature_noise):
     """Test the method `.fit` in the sqfa class."""
     covariances = rotated_classes_dataset()
-    points, labels = make_dataset_points(n_points=N_POINTS,
-                                         class_covariances=covariances)
+    points, labels = make_dataset_points(
+        n_points=N_POINTS, class_covariances=covariances
+    )
 
     model = sqfa.model.SQFA(
         n_dim=covariances.shape[-1],

@@ -58,7 +58,7 @@ def test_pca_points(make_pca_points, n_points, n_dim, n_components):
     points = make_pca_points
 
     # Check that error is raised if n_components > n_dim
-    if n_components  is not None and n_components > n_dim:
+    if n_components is not None and n_components > n_dim:
         with pytest.raises(ValueError):
             pca(points, n_components)
         return
