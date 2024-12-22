@@ -266,7 +266,7 @@ class SQFA(nn.Module):
                     )
 
                 # Train the current pair
-                loss_pair, training_time = fitting_loop(
+                loss_pair, training_time_pair = fitting_loop(
                     model=self,
                     data_scatters=data_scatters,
                     max_epochs=max_epochs,
@@ -280,7 +280,9 @@ class SQFA(nn.Module):
                 remove_parametrizations(self, "filters")
                 self._add_constraint(constraint=self.constraint)
                 loss = torch.cat((loss, loss_pair))
-                training_time = torch.cat((training_time, training_time))
+                if training_time.numel() > 0:
+                    training_time_pair = training_time_pair + training_time[-1]
+                training_time = torch.cat((training_time, training_time_pair))
 
             # Reset distance function
             self.distance_fun = distance_fun_original
