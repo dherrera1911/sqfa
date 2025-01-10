@@ -112,7 +112,7 @@ code), you can clone the repository and install the package
 in editable mode with the following commands:
 
 ```bash
-git clone git@github.com:dherrera1911/sqfa.git
+git clone https://github.com/dherrera1911/sqfa.git
 cd sqfa
 pip install -e .[dev]
 ```
