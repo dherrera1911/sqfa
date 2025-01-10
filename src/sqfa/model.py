@@ -7,7 +7,7 @@ from torch.nn.utils.parametrize import register_parametrization, remove_parametr
 
 from ._optim import fitting_loop
 from .constraints import FixedFilters, Identity, Sphere
-from .distances import _matrix_subset_distance_generator, affine_invariant_sq
+from .distances import _matrix_subset_distance_generator, affine_invariant
 from .linalg import conjugate_matrix
 from .statistics import class_statistics, pca, pca_from_scatter
 
@@ -72,7 +72,7 @@ class SQFA(nn.Module):
         self.register_buffer("diagonal_noise", feature_noise_mat)
 
         if distance_fun is None:
-            self.distance_fun = affine_invariant_sq
+            self.distance_fun = affine_invariant
         else:
             self.distance_fun = distance_fun
 
