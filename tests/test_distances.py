@@ -7,7 +7,7 @@ from make_examples import sample_spd
 from sqfa.distances import (
     affine_invariant_sq,
     log_euclidean_sq,
-    fisher_rao_lower_bound,
+    fisher_rao_lower_bound_sq,
 )
 
 torch.set_default_dtype(torch.float64)
@@ -92,4 +92,27 @@ def test_distance_sq(sample_spd_matrices, n_classes, n_dim):
     assert torch.allclose(
         ai_dist_to_eye, le_dist_to_eye, atol=1e-5
     ), "The AIRM and LE distances from the identity are not equal."
+
+
+@pytest.mark.parametrize("n_classes", [1, 4, 8])
+@pytest.mark.parametrize("n_dim", [2, 4, 6])
+def test_fisher_rao_sq(sample_spd_matrices, sample_vectors, n_classes, n_dim):
+    """Test the generalized eigenvalues function."""
+    spd_mat = sample_spd_matrices
+    means = sample_vectors
+
+    fr_distances = fisher_rao_lower_bound_sq(means=means, covariances=spd_mat)
+
+    if n_classes != 1:
+        assert fr_distances.shape == (n_classes, n_classes)
+    else:
+        assert fr_distances.shape == ()
+
+    assert torch.allclose(
+        fr_distances, fr_distances.T, atol=1e-5
+    ), "The self-distance matrix for AIRM is not symmetric"
+
+    assert torch.allclose(
+        get_diag(fr_distances), torch.zeros(n_classes), atol=1e-5
+    ), "The diagonal of the self-distance matrix for AIRM is not zero"
 
