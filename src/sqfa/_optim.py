@@ -32,7 +32,7 @@ def check_distances_valid(distances):
 
 def fitting_loop(
     model,
-    data_scatters,
+    data_statistics,
     max_epochs=200,
     lr=0.1,
     atol=1e-6,
@@ -47,9 +47,10 @@ def fitting_loop(
     ----------
     model : SQFA model object
         The model used for fitting.
-    data_scatters : torch.Tensor
-        Tensor of shape (n_classes, n_dim, n_dim) with the scatter matrices
-        of the data for each class.
+    data_statistics : torch.Tensor or dict
+        - If a torch.Tensor, should have shape (n_classes, n_dim, n_dim) and contain
+          the scatter matrices (second moments) of the data for each class.
+        - If a dict, it should contain fields 'means' and 'covariances'
     distance_fun : callable
         Function returning pairwise distances between covariance matrices.
         Takes as input two batches of covariance matrices of shape (batch_size, n_dim, n_dim)
@@ -80,12 +81,15 @@ def fitting_loop(
         **kwargs,
     )
 
-    n_classes = data_scatters.shape[0]
+    if isinstance(data_statistics, dict):
+        n_classes = data_statistics["means"].shape[0]
+    else:
+        n_classes = data_statistics.shape[0]
     tril_ind = torch.tril_indices(n_classes, n_classes, offset=-1)
 
     def closure():
         optimizer.zero_grad()
-        distances = model.get_class_distances(data_scatters, regularized=True)
+        distances = model.get_class_distances(data_statistics, regularized=True)
         check_distances_valid(distances)
         epoch_loss = -torch.mean(distances[tril_ind[0], tril_ind[1]])
         epoch_loss.backward()
