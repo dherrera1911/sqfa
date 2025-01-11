@@ -7,7 +7,11 @@ from torch.nn.utils.parametrize import register_parametrization, remove_parametr
 
 from ._optim import fitting_loop
 from .constraints import FixedFilters, Identity, Sphere
-from .distances import _matrix_subset_distance_generator, affine_invariant, fisher_rao_lower_bound
+from .distances import (
+    _matrix_subset_distance_generator,
+    affine_invariant,
+    fisher_rao_lower_bound,
+)
 from .linalg import conjugate_matrix
 from .statistics import class_statistics, pca, pca_from_scatter
 
@@ -35,7 +39,7 @@ def _stats_to_scatter(statistics):
         Scatter matrices of shape (n_classes, n_dim, n_dim).
     """
     if isinstance(statistics, dict):
-        _check_data_statistics(statistics)
+        _check_statistics(statistics)
 
         mean_outer_prod = torch.einsum(
           "ni,nj->nij", statistics["means"], statistics["means"]
@@ -46,9 +50,9 @@ def _stats_to_scatter(statistics):
 
     return scatter
 
-def _check_statistics(statistics):
+def _check_statistics(data_statistics):
     """
-    Checks that data_statistics is either:
+    Check that data_statistics is either:
       1) a torch.Tensor of shape (n_classes, n_dim, n_dim), or
       2) a dictionary containing at least the 'means' and 'covariances' keys.
 
@@ -379,9 +383,10 @@ class SQFA(nn.Module):
 
 
 class FisherRao(SQFA):
-    """Supervised Quadratic Feature Analysis (SQFA) model, using
-    the lower bound on the Fisher-Rao distance as the loss function."""
-
+    """
+    Supervised Quadratic Feature Analysis (SQFA) model, using
+    the lower bound on the Fisher-Rao distance as the loss function.
+    """
 
     def __init__(
         self,
@@ -432,7 +437,7 @@ class FisherRao(SQFA):
 
     def get_class_distances(self, data_statistics, regularized=False):
         """
-        Compute the pairwise lower bounds to the Fisher-Rao distances
+        Compute the pairwise lower bounds to the Fisher-Rao distances.
 
         Parameters
         ----------
@@ -513,7 +518,7 @@ class FisherRao(SQFA):
         else:
             if not isinstance(data_statistics, dict):
                 raise ValueError("Fisher-Rao distance requires class statistics dictionary as input")
-            _check_data_statistics(data_statistics)
+            _check_statistics(data_statistics)
 
         if not pairwise:
             loss, training_time = fitting_loop(
