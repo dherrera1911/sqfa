@@ -23,7 +23,7 @@ def test_training_function():
 
     loss, time = sqfa._optim.fitting_loop(
         model=model,
-        data_scatters=covariances,
+        data_statistics=covariances,
         lr=0.1,
         return_loss=True,
         max_epochs=MAX_EPOCHS,
@@ -50,7 +50,7 @@ def test_training_method(feature_noise, n_filters, pairwise):
     if n_filters == 1 and pairwise:
         with pytest.raises(ValueError):
             loss, time = model.fit(
-                data_scatters=covariances,
+                data_statistics=covariances,
                 lr=0.1,
                 pairwise=pairwise,
                 return_loss=True,
@@ -60,7 +60,7 @@ def test_training_method(feature_noise, n_filters, pairwise):
         return
     else:
         loss, time = model.fit(
-            data_scatters=covariances,
+            data_statistics=covariances,
             lr=0.1,
             pairwise=pairwise,
             return_loss=True,
@@ -122,12 +122,12 @@ def test_pca_init_scatters(n_filters, feature_noise):
     # PCA components
     components = sqfa.statistics.pca_from_scatter(covariances, n_components=n_filters)
     # PCA initialization
-    model.fit_pca(data_scatters=covariances)
+    model.fit_pca(data_statistics=covariances)
 
     assert torch.allclose(model.filters.detach(), components)
 
     loss, time = model.fit(
-        data_scatters=covariances,
+        data_statistics=covariances,
         lr=0.1,
         return_loss=True,
         max_epochs=MAX_EPOCHS,
