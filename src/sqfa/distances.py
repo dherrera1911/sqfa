@@ -179,9 +179,30 @@ def _embed_gaussian(means, covariances):
     return embedding
 
 
+def fisher_rao_lower_bound_sq(means, covariances):
+    """
+    Compute the lower bound of the Fisher-Rao squared distance between Gaussians.
+
+    Parameters
+    ----------
+    means : torch.Tensor
+        Shape (n_classes, n_filters), the means.
+    covariances : torch.Tensor
+        Shape (n_classes, n_filters, n_filters), the covariance matrices.
+
+    Returns
+    -------
+    distance_squared : torch.Tensor
+        Shape (n_classes, n_classes), the lower bound of the Fisher-Rao squared
+        distance.
+    """
+    embedding = _embed_gaussian(means, covariances)
+    distance_squared = affine_invariant_sq(embedding, embedding)
+    return distance_squared
+
 def fisher_rao_lower_bound(means, covariances):
     """
-    Compute the lower bound of the Fisher-Rao distance between Gaussians.
+    Compute the lower bound of the Fisher-Rao squared distance between Gaussians.
 
     Parameters
     ----------
@@ -195,5 +216,5 @@ def fisher_rao_lower_bound(means, covariances):
     distance : torch.Tensor
         Shape (n_classes, n_classes), the lower bound of the Fisher-Rao distance.
     """
-    embedding = _embed_gaussian(means, covariances)
-    return affine_invariant(embedding, embedding)
+    return torch.sqrt(fisher_rao_lower_bound_sq(means, covariances) + EPSILON)
+
