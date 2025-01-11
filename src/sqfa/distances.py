@@ -12,6 +12,7 @@ __all__ = [
     "affine_invariant",
     "log_euclidean_sq",
     "log_euclidean",
+    "fisher_rao_lower_bound",
 ]
 
 
@@ -145,3 +146,54 @@ def _matrix_subset_distance_generator(subset_inds, distance_fun):
         return distance_fun(A_subset, B_subset)
 
     return distance_subset
+
+
+def _embed_gaussian(means, covariances):
+    """
+    Embed the parameters of the Gaussian distribution in SPD,
+    by stacking the means and the covariances in the format
+    [covariances, means;
+    means.T, 1].
+
+    Parameters
+    ----------
+    means : torch.Tensor
+        Shape (n_classes, n_filters), the means.
+    covariances : torch.Tensor
+        Shape (n_classes, n_filters, n_filters), the covariance matrices.
+
+    Returns
+    -------
+    embedding : torch.Tensor
+        Shape (n_classes, n_filters+1, n_filters+1), the embedded SPD matrices.
+    """
+    n_classes, n_filters = means.shape
+
+    mean_outer_prod = torch.einsum("ni,nj->nij", means, means)
+    second_moments = covariances + mean_outer_prod
+
+    embedding = torch.cat([second_moments, means.unsqueeze(1)], dim=1)
+    one = torch.ones(n_classes, dtype=means.dtype, device=means.device)
+    means_long = torch.cat([means, one.unsqueeze(1)], dim=1)
+    embedding = torch.cat([embedding, means_long.unsqueeze(2)], dim=2)
+    return embedding
+
+
+def fisher_rao_lower_bound(means, covariances):
+    """
+    Compute the lower bound of the Fisher-Rao distance between Gaussians.
+
+    Parameters
+    ----------
+    means : torch.Tensor
+        Shape (n_classes, n_filters), the means.
+    covariances : torch.Tensor
+        Shape (n_classes, n_filters, n_filters), the covariance matrices.
+
+    Returns
+    -------
+    distance : torch.Tensor
+        Shape (n_classes, n_classes), the lower bound of the Fisher-Rao distance.
+    """
+    embedding = _embed_gaussian(means, covariances)
+    return affine_invariant(embedding, embedding)
