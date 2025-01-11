@@ -42,13 +42,14 @@ def _stats_to_scatter(statistics):
         _check_statistics(statistics)
 
         mean_outer_prod = torch.einsum(
-          "ni,nj->nij", statistics["means"], statistics["means"]
+            "ni,nj->nij", statistics["means"], statistics["means"]
         )
         scatter = statistics["covariances"] + mean_outer_prod
     else:
         scatter = statistics
 
     return scatter
+
 
 def _check_statistics(data_statistics):
     """
@@ -83,6 +84,7 @@ def _check_statistics(data_statistics):
             "`data_statistics` must be either a dict with 'means' and 'covariances' "
             "or a torch.Tensor of shape (n_classes, n_dim, n_dim)."
         )
+
 
 class SQFA(nn.Module):
     """Supervised Quadratic Feature Analysis (SQFA) model."""
@@ -455,7 +457,9 @@ class FisherRao(SQFA):
             Pairwise distances between the transformed feature scatter matrices.
         """
         if not isinstance(data_statistics, dict):
-            raise ValueError("Fisher-Rao distance requires class statistics dictionary as input")
+            raise ValueError(
+                "Fisher-Rao distance requires class statistics dictionary as input"
+            )
         # Compute feature statistics
         feature_means = self.transform(data_statistics["means"])
         feature_covariances = self.transform_scatters(data_statistics["covariances"])
@@ -517,7 +521,9 @@ class FisherRao(SQFA):
             data_statistics = class_statistics(X, y, estimator=estimator)
         else:
             if not isinstance(data_statistics, dict):
-                raise ValueError("Fisher-Rao distance requires class statistics dictionary as input")
+                raise ValueError(
+                    "Fisher-Rao distance requires class statistics dictionary as input"
+                )
             _check_statistics(data_statistics)
 
         if not pairwise:
@@ -532,10 +538,11 @@ class FisherRao(SQFA):
             )
 
         else:
-            raise NotImplementedError("Pairwise training not implemented for Fisher-Rao distance")
+            raise NotImplementedError(
+                "Pairwise training not implemented for Fisher-Rao distance"
+            )
 
         if return_loss:
             return loss, training_time
         else:
             return None
-
