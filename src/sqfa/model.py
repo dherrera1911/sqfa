@@ -7,7 +7,7 @@ from torch.nn.utils.parametrize import register_parametrization, remove_parametr
 
 from ._optim import fitting_loop
 from .constraints import FixedFilters, Identity, Sphere
-from .distances import _matrix_subset_distance_generator, affine_invariant
+from .distances import _matrix_subset_distance_generator, affine_invariant, fisher_rao_lower_bound
 from .linalg import conjugate_matrix
 from .statistics import class_statistics, pca, pca_from_scatter
 
@@ -17,6 +17,68 @@ __all__ = ["SQFA"]
 def __dir__():
     return __all__
 
+
+def _stats_to_scatter(statistics):
+    """
+    Convert data_statistics input to scatter matrices.
+
+    Parameters
+    ----------
+    statistics : torch.Tensor or dict
+        - If a torch.Tensor, should have shape (n_classes, n_dim, n_dim) and contain
+          the scatter matrices (second moments) of the data for each class.
+        - If a dict, it should contain fields 'means' and 'covariances'.
+
+    Returns
+    -------
+    torch.Tensor
+        Scatter matrices of shape (n_classes, n_dim, n_dim).
+    """
+    if isinstance(statistics, dict):
+        _check_data_statistics(statistics)
+
+        mean_outer_prod = torch.einsum(
+          "ni,nj->nij", statistics["means"], statistics["means"]
+        )
+        scatter = statistics["covariances"] + mean_outer_prod
+    else:
+        scatter = statistics
+
+    return scatter
+
+def _check_statistics(statistics):
+    """
+    Checks that data_statistics is either:
+      1) a torch.Tensor of shape (n_classes, n_dim, n_dim), or
+      2) a dictionary containing at least the 'means' and 'covariances' keys.
+
+    Parameters
+    ----------
+    data_statistics : torch.Tensor or dict
+        Data statistics, either as a tensor with second moments or a dictionary
+        containing means and covariances.
+
+    Raises
+    ------
+    ValueError
+        If `data_statistics` is a dictionary but does not contain the required keys.
+    TypeError
+        If `data_statistics` is neither a dictionary nor a tensor-like object.
+    """
+    if isinstance(data_statistics, dict):
+        required_keys = {"means", "covariances"}
+        missing_keys = required_keys - set(data_statistics.keys())
+        if missing_keys:
+            raise ValueError(
+                f"`data_statistics` dictionary must contain the keys {required_keys}. "
+                f"Missing keys: {missing_keys}"
+            )
+    elif not hasattr(data_statistics, "shape"):
+        # If it's not a dict or something that looks like a tensor, raise a TypeError
+        raise TypeError(
+            "`data_statistics` must be either a dict with 'means' and 'covariances' "
+            "or a torch.Tensor of shape (n_classes, n_dim, n_dim)."
+        )
 
 class SQFA(nn.Module):
     """Supervised Quadratic Feature Analysis (SQFA) model."""
@@ -97,16 +159,17 @@ class SQFA(nn.Module):
         feature_scatters = conjugate_matrix(data_scatters, self.filters)
         return feature_scatters
 
-    def get_class_distances(self, data_scatters, regularized=False):
+    def get_class_distances(self, data_statistics, regularized=False):
         """
         Compute the pairwise distances between the feature scatter matrices of the
         different classes.
 
         Parameters
         ----------
-        data_scatters : torch.Tensor
-            Tensor of shape (n_classes, n_dim, n_dim), with second
-            moment or covariance matrices.
+        data_statistics : torch.Tensor or dict
+            - If a torch.Tensor, should have shape (n_classes, n_dim, n_dim) and contain
+              the scatter matrices (second moments) of the data for each class.
+            - If a dict, it should contain fields 'means' and 'covariances'.
         regularized : bool
             If True, regularize the distances by adding a small value to the
             diagonal of the transformed scatter matrices. Default is False.
@@ -116,6 +179,8 @@ class SQFA(nn.Module):
         torch.Tensor shape (n_classes, n_classes)
             Pairwise distances between the transformed feature scatter matrices.
         """
+        data_scatters = _stats_to_scatter(data_statistics)
+
         feature_scatters = self.transform_scatters(data_scatters)
 
         if regularized:
@@ -141,7 +206,7 @@ class SQFA(nn.Module):
         transformed_points = torch.einsum("ij,nj->ni", self.filters, data_points)
         return transformed_points
 
-    def fit_pca(self, X=None, data_scatters=None):
+    def fit_pca(self, X=None, data_statistics=None):
         """
         Fit the SQFA filters to the data using PCA. This can be used to
         initialize the filters before training.
@@ -150,13 +215,13 @@ class SQFA(nn.Module):
         ----------
         X : torch.Tensor
             Input data of shape (n_samples, n_dim).
-        data_scatters : torch.Tensor
+        data_statistics : torch.Tensor
             Tensor of shape (n_classes, n_dim, n_dim) with the second moments
             of the data for each class. If None, then X and y must be provided.
             Default is None.
         """
-        if X is None and data_scatters is None:
-            raise ValueError("Either X or data_scatters must be provided.")
+        if X is None and data_statistics is None:
+            raise ValueError("Either X or data_statistics must be provided.")
         if self.filters.shape[0] > self.filters.shape[1]:
             raise ValueError(
                 "Number of filters must be less than or equal to the data dimension."
@@ -164,9 +229,10 @@ class SQFA(nn.Module):
 
         n_components = self.filters.shape[0]
 
-        if data_scatters is None:
+        if data_statistics is None:
             pca_filters = pca(X, n_components)
         else:
+            data_scatters = _stats_to_scatter(data_statistics)
             pca_filters = pca_from_scatter(data_scatters, n_components)
 
         # Assign fitlers parameter to sqfa
@@ -178,10 +244,10 @@ class SQFA(nn.Module):
         self,
         X=None,
         y=None,
-        data_scatters=None,
+        data_statistics=None,
         max_epochs=300,
         lr=0.1,
-        estimator="oas",
+        estimator="empirical",
         pairwise=False,
         show_progress=True,
         return_loss=False,
@@ -193,15 +259,15 @@ class SQFA(nn.Module):
         Parameters
         ----------
         X : torch.Tensor
-            Input data of shape (n_samples, n_dim). If data_scatters is None,
+            Input data of shape (n_samples, n_dim). If data_statistics is None,
             then X and y must be provided.
         y : torch.Tensor
-            Labels of shape (n_samples,). If data_scatters is None, then X
+            Labels of shape (n_samples,). If data_statistics is None, then X
             and y must be provided. Labels must be integers starting from 0.
-        data_scatters : torch.Tensor
-            Tensor of shape (n_classes, n_dim, n_dim) with the second moments
-            of the data for each class. If None, then X and y must be provided.
-            Default is None.
+        data_statistics : torch.Tensor or dict
+            - If a torch.Tensor, should have shape (n_classes, n_dim, n_dim) and contain
+              the scatter matrices (second moments) of the data for each class.
+            - If a dict, it should contain fields 'means' and 'covariances'
         max_epochs : int, optional
             Number of max training epochs. By default 50.
         lr : float
@@ -221,16 +287,18 @@ class SQFA(nn.Module):
         **kwargs
             Additional keyword arguments passed to the NAdam optimizer.
         """
-        if data_scatters is None:
+        if data_statistics is None:
             if X is None or y is None:
-                raise ValueError("Either data_scatters or X and y must be provided.")
+                raise ValueError("Either data_statistics or X and y must be provided.")
             stats_dict = class_statistics(X, y, estimator=estimator)
             data_scatters = stats_dict["second_moments"]
+        else:
+            data_scatters = _stats_to_scatter(data_statistics)
 
         if not pairwise:
             loss, training_time = fitting_loop(
                 model=self,
-                data_scatters=data_scatters,
+                data_statistics=data_scatters,
                 max_epochs=max_epochs,
                 lr=lr,
                 show_progress=show_progress,
@@ -268,7 +336,7 @@ class SQFA(nn.Module):
                 # Train the current pair
                 loss_pair, training_time_pair = fitting_loop(
                     model=self,
-                    data_scatters=data_scatters,
+                    data_statistics=data_scatters,
                     max_epochs=max_epochs,
                     lr=lr,
                     show_progress=show_progress,
@@ -308,3 +376,161 @@ class SQFA(nn.Module):
             register_parametrization(self, "filters", Sphere())
         elif constraint == "orthogonal":
             orthogonal(self, "filters")
+
+
+class FisherRao(SQFA):
+    """Supervised Quadratic Feature Analysis (SQFA) model, using
+    the lower bound on the Fisher-Rao distance as the loss function."""
+
+
+    def __init__(
+        self,
+        n_dim,
+        feature_noise=0,
+        n_filters=2,
+        filters=None,
+        constraint="sphere",
+    ):
+        """
+        Initialize SQFA.
+
+        Parameters
+        ----------
+        n_dim : int
+            Dimension of the input data space.
+        feature_noise : float
+            Noise added to the features outputs, i.e. a diagonal term added
+            to the covariance matrix of the features. Default is 0.
+        n_filters : int
+            Number of filters to use. Default is 2. If filters is provided,
+            n_filters is ignored.
+        filters : torch.Tensor
+            Filters to use. If n_filters is provided, filters are randomly
+            initialized. Default is None. Of shape (n_filters, n_dim).
+        constraint : str
+            Constraint to apply to the filters. Can be 'none', 'sphere' or
+            'orthogonal'. Default is 'sphere'.
+        """
+        super().__init__()
+
+        if filters is None:
+            filters = torch.randn(n_filters, n_dim)
+        else:
+            filters = torch.as_tensor(filters, dtype=torch.float32)
+
+        self.filters = nn.Parameter(filters)
+
+        feature_noise_mat = torch.as_tensor(
+            feature_noise, dtype=torch.float32
+        ) * torch.eye(n_filters)
+        self.register_buffer("diagonal_noise", feature_noise_mat)
+
+        self.distance_fun = fisher_rao_lower_bound
+
+        self.constraint = constraint
+        self._add_constraint(constraint=self.constraint)
+
+    def get_class_distances(self, data_statistics, regularized=False):
+        """
+        Compute the pairwise lower bounds to the Fisher-Rao distances
+
+        Parameters
+        ----------
+        data_statistics : torch.Tensor or dict
+            - If a torch.Tensor, should have shape (n_classes, n_dim, n_dim) and contain
+              the scatter matrices (second moments) of the data for each class.
+            - If a dict, it should contain fields 'means' and 'covariances'.
+        regularized : bool
+            If True, regularize the distances by adding a small value to the
+            diagonal of the transformed scatter matrices. Default is False.
+
+        Returns
+        -------
+        torch.Tensor shape (n_classes, n_classes)
+            Pairwise distances between the transformed feature scatter matrices.
+        """
+        if not isinstance(data_statistics, dict):
+            raise ValueError("Fisher-Rao distance requires class statistics dictionary as input")
+        # Compute feature statistics
+        feature_means = self.transform(data_statistics["means"])
+        feature_covariances = self.transform_scatters(data_statistics["covariances"])
+
+        if regularized:
+            feature_covariances = feature_covariances + self.diagonal_noise[None, :, :]
+
+        distances = self.distance_fun(feature_means, feature_covariances)
+        return distances
+
+    def fit(
+        self,
+        X=None,
+        y=None,
+        data_statistics=None,
+        max_epochs=300,
+        lr=0.1,
+        estimator="oas",
+        pairwise=False,
+        show_progress=True,
+        return_loss=False,
+        **kwargs,
+    ):
+        """
+        Fit the SQFA model to data using the LBFGS optimizer.
+
+        Parameters
+        ----------
+        X : torch.Tensor
+            Input data of shape (n_samples, n_dim). If data_statistics is None,
+            then X and y must be provided.
+        y : torch.Tensor
+            Labels of shape (n_samples,). If data_statistics is None, then X
+            and y must be provided. Labels must be integers starting from 0.
+        data_statistics : dict
+            Dictionary containing the fields 'means' and 'covariances'
+        max_epochs : int, optional
+            Number of max training epochs. By default 50.
+        lr : float
+            Learning rate for the optimizer. Default is 0.1.
+        estimator:
+            Covariance estimator to use. Options are "empirical",
+            and "oas". Default is "oas".
+        pairwise : bool
+            If True, then filters are optimized pairwise (the first 2 filters
+            are optimized together, then held fixed and the next 2 filters are
+            optimized together, etc.). If False, all filters are optimized
+            together. Default is False.
+        show_progress : bool
+            If True, show a progress bar during training. Default is True.
+        return_loss : bool
+            If True, return the loss after training. Default is False.
+        **kwargs
+            Additional keyword arguments passed to the NAdam optimizer.
+        """
+        if data_statistics is None:
+            if X is None or y is None:
+                raise ValueError("Either data_statistics or X and y must be provided.")
+            data_statistics = class_statistics(X, y, estimator=estimator)
+        else:
+            if not isinstance(data_statistics, dict):
+                raise ValueError("Fisher-Rao distance requires class statistics dictionary as input")
+            _check_data_statistics(data_statistics)
+
+        if not pairwise:
+            loss, training_time = fitting_loop(
+                model=self,
+                data_statistics=data_statistics,
+                max_epochs=max_epochs,
+                lr=lr,
+                show_progress=show_progress,
+                return_loss=True,
+                **kwargs,
+            )
+
+        else:
+            raise NotImplementedError("Pairwise training not implemented for Fisher-Rao distance")
+
+        if return_loss:
+            return loss, training_time
+        else:
+            return None
+
