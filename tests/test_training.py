@@ -8,27 +8,67 @@ from make_examples import make_dataset_points, rotated_classes_dataset
 
 MAX_EPOCHS = 50
 N_POINTS = 100
-torch.manual_seed(0)
+N_DIM = 8
+torch.manual_seed(1)
 
 
-def test_training_function():
+def initialize_model(model_type):
+    """Generate a tensor of SPD matrices."""
+    if model_type == "sqfa":
+        model = sqfa.model.SQFA(
+            n_dim=N_DIM,
+            feature_noise=0.001,
+            n_filters=2,
+        )
+    elif model_type == "fisher":
+        model = sqfa.model.FisherRao(
+            n_dim=N_DIM,
+            feature_noise=0.001,
+            n_filters=2,
+        )
+    return model
+
+
+@pytest.mark.parametrize("model_type", ["sqfa", "fisher"])
+def test_training_function(model_type):
     """Test the training function in sqfa._optim."""
     covariances = rotated_classes_dataset()
 
-    model = sqfa.model.SQFA(
-        n_dim=covariances.shape[-1],
-        feature_noise=0.001,
-        n_filters=2,
-    )
+    model = initialize_model(model_type)
 
-    loss, time = sqfa._optim.fitting_loop(
-        model=model,
-        data_statistics=covariances,
-        lr=0.1,
-        return_loss=True,
-        max_epochs=MAX_EPOCHS,
-        show_progress=False,
-    )
+    if model_type == "sqfa":
+        loss, time = sqfa._optim.fitting_loop(
+            model=model,
+            data_statistics=covariances,
+            lr=0.1,
+            return_loss=True,
+            max_epochs=MAX_EPOCHS,
+            show_progress=False,
+        )
+    elif model_type == "fisher":
+        # Check value error is raised when using only covariances
+        with pytest.raises(ValueError):
+            loss, time = sqfa._optim.fitting_loop(
+                model=model,
+                data_statistics=covariances,
+                lr=0.1,
+                return_loss=True,
+                max_epochs=MAX_EPOCHS,
+                show_progress=False,
+            )
+        # Make dictionary with covariance and means input
+        stats_dict = {
+          "covariances": covariances,
+          "means": torch.zeros_like(covariances[:,:,0]),
+        }
+        loss, time = sqfa._optim.fitting_loop(
+            model=model,
+            data_statistics=stats_dict,
+            lr=0.1,
+            return_loss=True,
+            max_epochs=MAX_EPOCHS,
+            show_progress=False,
+        )
 
     assert loss[-1] is not torch.nan, "Loss is NaN"
     assert not torch.isinf(loss[-1]), "Loss is infinite"
