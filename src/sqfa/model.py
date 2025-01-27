@@ -15,7 +15,7 @@ from .distances import (
 from .linalg import conjugate_matrix
 from .statistics import class_statistics, pca, pca_from_scatter
 
-__all__ = ["SQFA"]
+__all__ = ["SQFA", "FisherRao"]
 
 
 def __dir__():
@@ -418,24 +418,14 @@ class FisherRao(SQFA):
             Constraint to apply to the filters. Can be 'none', 'sphere' or
             'orthogonal'. Default is 'sphere'.
         """
-        super().__init__()
-
-        if filters is None:
-            filters = torch.randn(n_filters, n_dim)
-        else:
-            filters = torch.as_tensor(filters, dtype=torch.float32)
-
-        self.filters = nn.Parameter(filters)
-
-        feature_noise_mat = torch.as_tensor(
-            feature_noise, dtype=torch.float32
-        ) * torch.eye(n_filters)
-        self.register_buffer("diagonal_noise", feature_noise_mat)
-
-        self.distance_fun = fisher_rao_lower_bound
-
-        self.constraint = constraint
-        self._add_constraint(constraint=self.constraint)
+        super().__init__(
+            n_dim=n_dim,
+            feature_noise=feature_noise,
+            n_filters=n_filters,
+            filters=filters,
+            distance_fun=fisher_rao_lower_bound,
+            constraint=constraint,
+        )
 
     def get_class_distances(self, data_statistics, regularized=False):
         """
