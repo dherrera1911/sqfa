@@ -530,21 +530,18 @@ class FisherRao(SQFA):
                 )
             _check_statistics(data_statistics)
 
-        if not pairwise:
-            loss, training_time = fitting_loop(
-                model=self,
-                data_statistics=data_statistics,
-                max_epochs=max_epochs,
-                lr=lr,
-                show_progress=show_progress,
-                return_loss=True,
-                **kwargs,
-            )
-
-        else:
-            raise NotImplementedError(
-                "Pairwise training not implemented for Fisher-Rao distance"
-            )
+        loss, training_time = super().fit(
+            X=None,
+            y=None,
+            data_statistics=data_statistics,
+            max_epochs=max_epochs,
+            lr=lr,
+            estimator=estimator,
+            pairwise=pairwise,
+            show_progress=show_progress,
+            return_loss=True,
+            **kwargs,
+        )
 
         if return_loss:
             return loss, training_time
