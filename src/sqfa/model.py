@@ -318,8 +318,11 @@ class SQFA(nn.Module):
             )
 
         else:
-            distance_fun_original = self.distance_fun
             n_pairs = self.filters.shape[0] // 2
+
+            # Store initial filters
+            filters_original = self.filters.detach().clone()
+            noise_original = self.diagonal_noise.detach().clone()[0,0]
 
             # Require n_pairs to be even
             if self.filters.shape[0] % 2 != 0:
@@ -330,13 +333,27 @@ class SQFA(nn.Module):
             # Loop over pairs
             loss = torch.tensor([])
             training_time = torch.tensor([])
+            filters_last_trained = torch.zeros(0)
             for i in range(n_pairs):
-                # Make function to only evaluate distance on subset of filters
-                max_ind = min([2 * i + 2, self.filters.shape[0]])
-                inds_filters_used = torch.arange(max_ind)
-                self.distance_fun = _matrix_subset_distance_generator(
-                    subset_inds=inds_filters_used, distance_fun=distance_fun_original
-                )
+
+                # Re-initialize filters, to be a tensor of shape (2*(i+1), n_dim)
+                # with the first 2*i filters being the filters from the previous
+                # iteration
+                filters_last_trained = self.filters.detach().clone()
+                if i == 0:
+                    filters_new_init = filters_original[:2]
+                else:
+                    filters_new_init = torch.cat((
+                        filters_last_trained,
+                        filters_original[2 * i : 2 * (i + 1)]
+                    ))
+                remove_parametrizations(self, "filters")
+                self.filters = nn.Parameter(filters_new_init)
+                self._add_constraint(constraint=self.constraint)
+
+                # Re-initialize noise, to be a tensor of shape (2*(i+1), 2*(i+1))
+                feature_noise_mat = noise_original * torch.eye(2 * (i + 1))
+                self.register_buffer("diagonal_noise", feature_noise_mat)
 
                 # Fix the filters already trained
                 if i > 0:
@@ -362,9 +379,6 @@ class SQFA(nn.Module):
                 if training_time.numel() > 0:
                     training_time_pair = training_time_pair + training_time[-1]
                 training_time = torch.cat((training_time, training_time_pair))
-
-            # Reset distance function
-            self.distance_fun = distance_fun_original
 
         if return_loss:
             return loss, training_time
