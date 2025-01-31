@@ -8,7 +8,6 @@ from torch.nn.utils.parametrize import register_parametrization, remove_parametr
 from ._optim import fitting_loop
 from .constraints import FixedFilters, Identity, Sphere
 from .distances import (
-    _matrix_subset_distance_generator,
     affine_invariant,
     fisher_rao_lower_bound,
 )

@@ -115,39 +115,6 @@ def log_euclidean(A, B):
     return torch.sqrt(log_euclidean_sq(A, B) + EPSILON)
 
 
-def _matrix_subset_distance_generator(subset_inds, distance_fun):
-    """
-    Generate a function takes a sub-matrix from input SPD matrices
-    and then computes the distance between them.
-
-    Parameters
-    ----------
-    subset_inds : torch.Tensor
-        Shape (n_subset,), the indices of the subset of elements.
-    distance_fun : callable
-        Function to compute the distance between the transformed feature
-        covariances. Should take as input two tensors of shape
-        (n_classes, n_filters, n_filters) and return a matrix
-        of shape (n_classes, n_classes) with the pairwise distances
-        (or squared distances or similarities).
-        If None, then the Affine Invariant squared distance is used.
-
-    Returns
-    -------
-    distance_subset : callable
-        Function that computes the distance between the subset of elements.
-    """
-    subset_inds_copy = subset_inds.clone()
-
-    def distance_subset(A, B):
-        # Extract the subset of elements
-        A_subset = A[:, subset_inds_copy][:, :, subset_inds_copy]
-        B_subset = B[:, subset_inds_copy][:, :, subset_inds_copy]
-        return distance_fun(A_subset, B_subset)
-
-    return distance_subset
-
-
 def _embed_gaussian(means, covariances):
     """
     Embed the parameters of the Gaussian distribution in SPD,
@@ -181,7 +148,8 @@ def _embed_gaussian(means, covariances):
 
 def fisher_rao_lower_bound_sq(means, covariances):
     """
-    Compute the lower bound of the Fisher-Rao squared distance between Gaussians.
+    Compute the Calvo & Oller lower bound of the Fisher-Rao squared
+    distance between Gaussians.
 
     Parameters
     ----------
@@ -202,7 +170,8 @@ def fisher_rao_lower_bound_sq(means, covariances):
 
 def fisher_rao_lower_bound(means, covariances):
     """
-    Compute the lower bound of the Fisher-Rao squared distance between Gaussians.
+    Compute the Calvo & Oller lower bound of the Fisher-Rao squared
+    distance between Gaussians.
 
     Parameters
     ----------
