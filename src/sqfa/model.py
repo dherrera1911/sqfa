@@ -24,7 +24,10 @@ def __dir__():
 
 def _stats_to_scatter(statistics):
     """
-    Convert data_statistics input to scatter matrices.
+    Convert data_statistics input to scatter matrices. This function
+    is used to allow the input to the model to be either
+    a dictionary with means and covariances or a tensor with the
+    second moments.
 
     Parameters
     ----------
@@ -185,6 +188,7 @@ class SQFA(nn.Module):
         torch.Tensor shape (n_classes, n_classes)
             Pairwise distances between the transformed feature scatter matrices.
         """
+        # Bring different input type options to the same format
         data_scatters = _stats_to_scatter(data_statistics)
 
         feature_scatters = self.transform_scatters(data_scatters)
@@ -299,6 +303,7 @@ class SQFA(nn.Module):
             stats_dict = class_statistics(X, y, estimator=estimator)
             data_scatters = stats_dict["second_moments"]
         else:
+            # Bring different input type options to the same format
             data_scatters = _stats_to_scatter(data_statistics)
 
         if not pairwise:
