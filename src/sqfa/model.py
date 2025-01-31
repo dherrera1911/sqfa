@@ -299,16 +299,12 @@ class SQFA(nn.Module):
         if data_statistics is None:
             if X is None or y is None:
                 raise ValueError("Either data_statistics or X and y must be provided.")
-            stats_dict = class_statistics(X, y, estimator=estimator)
-            data_scatters = stats_dict["second_moments"]
-        else:
-            # Bring different input type options to the same format
-            data_scatters = _stats_to_scatter(data_statistics)
+            data_statistics = class_statistics(X, y, estimator=estimator)
 
         if not pairwise:
             loss, training_time = fitting_loop(
                 model=self,
-                data_statistics=data_scatters,
+                data_statistics=data_statistics,
                 max_epochs=max_epochs,
                 lr=lr,
                 show_progress=show_progress,
@@ -363,7 +359,7 @@ class SQFA(nn.Module):
                 # Train the current pair
                 loss_pair, training_time_pair = fitting_loop(
                     model=self,
-                    data_statistics=data_scatters,
+                    data_statistics=data_statistics,
                     max_epochs=max_epochs,
                     lr=lr,
                     show_progress=show_progress,
@@ -530,7 +526,7 @@ class FisherRao(SQFA):
         else:
             if not isinstance(data_statistics, dict):
                 raise ValueError(
-                    "Fisher-Rao distance requires class statistics dictionary as input"
+                    "Fisher-Rao distance requires class statistics dictionary or X and y as input"
                 )
             _check_statistics(data_statistics)
 
