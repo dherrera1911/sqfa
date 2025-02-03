@@ -11,8 +11,9 @@
 
 Supervised Quadratic Feature Analysis (SQFA) is a supervised dimensionality
 reduction technique. It learns a set of linear features that
-maximize the differences in second-order statistics between
-classes. The `sqfa` package implements SQFA.
+maximize the differences in first- and second-order statistics between
+classes, in a way that supports quadratic classifiers (e.g. QDA).
+The `sqfa` package implements SQFA.
 
 For detailed information on the method and the package, see the
 [sqfa package tutorials](https://sqfa.readthedocs.io/en/latest/tutorials/spd_geometry.html).
@@ -34,7 +35,7 @@ trainset = torchvision.datasets.MNIST(
 )
 X = trainset.data.reshape(-1, 28 * 28).float()
 y = trainset.targets
-# Normalize X
+# Scale X
 X = X / (X.std() * 28.0)
 X = X - X.mean(dim=0, keepdim=True)
 
@@ -52,17 +53,16 @@ model = sqfa.model.SQFA(
 model.fit_pca(X) # Optional: PCA initialization to speed up convergence
 model.fit(X=X, y=y)
 
-# 2) Give scatter matrices as input
+# 2) Give dictionary with data statistics as input
 data_stats = sqfa.statistics.class_statistics(X, y)
-second_moments = data_stats["second_moments"]
-model.fit_pca(data_scatters=second_moments) # Optional: PCA initialization to speed up convergence
-model.fit(data_scatters=second_moments)
+model.fit_pca(data_statistics=data_stats) # Optional: PCA initialization to speed up convergence
+model.fit(data_statistics=data_stats)
 
 ### TRANSFORM DATA AND SECOND MOMENTS TO THE LEARNED FEATURE SPACE
 
 X_transformed = model.transform(X).detach()
 second_moments_transformed = model.transform_scatters(
-    second_moments
+    data_stats["second_moments"],
 ).detach()
 ```
 
@@ -116,3 +116,10 @@ git clone https://github.com/dherrera1911/sqfa.git
 cd sqfa
 pip install -e .[dev]
 ```
+
+## Citation
+
+The package is described in the following paper:
+"Supervised Quadratic Feature Analysis: An Information Geometry Approach to Dimensionality Reduction"
+Herrera-Esposito, D. and Burge, J. (2025) Under review.
+
