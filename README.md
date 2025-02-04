@@ -16,7 +16,8 @@ classes, in a way that supports quadratic classifiers (e.g. QDA).
 The `sqfa` package implements SQFA.
 
 For detailed information on the method and the package, see the
-[sqfa package tutorials](https://sqfa.readthedocs.io/en/latest/tutorials/spd_geometry.html).
+[sqfa package tutorials](https://sqfa.readthedocs.io/en/latest/tutorials/spd_geometry.html)
+and the SQFA preprint [(https://arxiv.org/abs/2502.00168)](https://arxiv.org/abs/2502.00168).
 
 ## Overview
 
@@ -119,7 +120,7 @@ pip install -e .[dev]
 
 ## Citation
 
-The package is described in the following paper:
+SQFA is presented in the preprint
 "Supervised Quadratic Feature Analysis: An Information Geometry Approach to Dimensionality Reduction"
-Herrera-Esposito, D. and Burge, J. (2025) Under review.
+Herrera-Esposito, D. and Burge, J. (2025) [arXiv:2502.00168](https://arxiv.org/abs/2502.00168).
 

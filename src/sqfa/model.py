@@ -14,7 +14,7 @@ from .distances import (
 from .linalg import conjugate_matrix
 from .statistics import class_statistics, pca, pca_from_scatter
 
-__all__ = ["SQFA", "FisherRao"]
+__all__ = ["SecondMomentsSQFA", "SQFA"]
 
 
 def __dir__():
@@ -88,8 +88,10 @@ def _check_statistics(data_statistics):
         )
 
 
-class SQFA(nn.Module):
-    """Supervised Quadratic Feature Analysis (SQFA) model."""
+class SecondMomentsSQFA(nn.Module):
+    """Second-moments Supervised Quadratic Feature Analysis (SQFA) model.
+    This version of the model uses only the second moment matrices of the data,
+    and distances in the SPD manifold."""
 
     def __init__(
         self,
@@ -263,7 +265,7 @@ class SQFA(nn.Module):
         **kwargs,
     ):
         """
-        Fit the SQFA model to data using the LBFGS optimizer.
+        Fit the second-moments SQFA model to data using the LBFGS optimizer.
 
         Parameters
         ----------
@@ -398,10 +400,11 @@ class SQFA(nn.Module):
             orthogonal(self, "filters")
 
 
-class FisherRao(SQFA):
+class SQFA(SecondMomentsSQFA):
     """
-    Supervised Quadratic Feature Analysis (SQFA) model, using
-    the lower bound on the Fisher-Rao distance as the loss function.
+    Supervised Quadratic Feature Analysis (SQFA) model.
+    This version of the model uses both the means and the covariances of the data,
+    and uses distances (or approximations) in the manifold of normal distributions.
     """
 
     def __init__(

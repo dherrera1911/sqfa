@@ -14,26 +14,74 @@ kernelspec:
 # Geometry of SQFA
 
 In this tutorial we provide a brief overview of the geometric perspective
-of second-order statistics that underlies SQFA.
+of SQFA and smSQFA. We start by explaining what is supervised linear
+dimensionality reduction. Then, we explain how SQFA and smSQFA
+use a geometric perspective on discriminability to learn
+discriminative features.
 
-## Manifold of SPD Matrices
+## SQFA and smSQFA perform supervised dimensionality reduction
+
+Supervised linear dimensionality reduction is a class
+of methods that use the class labels of the data to learn a set
+of linear features that are useful for classification.
+
+More specifically, given a dataset $\{\mathbf{x}_t, y_t\}_{t=1}^N$
+where $\mathbf{x}_t \in \mathbb{R}^n$ are the data vectors, $y_t$ are the
+class labels, the goal of supervised linear dimensionality reduction in
+general is to learn a set of linear filters
+$\mathbf{F} \in \mathbb{R}^{n \times m}$, $m<n$ such that
+the transformed data points $\mathbf{z}_t = \mathbf{F}^T \mathbf{x}_t$
+support classification as best as possible.
+
+To make this clearer, it is useful to consider the classical
+example of supervised dimensionality reduction,
+[Linear Discriminant Analysis](https://en.wikipedia.org/wiki/Linear_discriminant_analysis)
+(LDA). LDA aims to maximize linear discriminability.
+For this, LDA uses the class-conditional means
+$\mu_i = \mathbb{E}[\mathbf{z} | y=i]$ and the residual covariance matrix
+$\Sigma$, where it is assumed that all classes have the same
+covariance matrix. Then, LDA learns a set of linear filters
+$\mathbf{F} \in \mathbb{R}^{n \times m}$ that maximizes the spread
+between the class means (or their distances)
+relative to the covariance of the data.
+For this goal, LDA quantifies the spread between class means
+using the Mahalanobis distance,
+which is just the Euclidean distance after transforming
+the data to have $\Sigma = \mathbf{I}_m$, where $\mathbf{I}_m$
+is the $m \times m$ identity matrix.
+
+The goal of SQFA and smSQFA is similar to LDA. What
+characterizes SQFA and smSQFA, however, is that they take
+into account the class-specific second-order statistics to make
+the classes discriminable. Specifically, SQFA uses both
+the class-conditional means and the class-conditional
+covariance matrices, and smSQFA uses only the class-conditional
+second-moment matrices. Then, SQFA and smSQFA learn the
+filters that make the classes as different as possible
+considering their second-order statistics. Such
+differences in second-order statistics are particularly
+useful for quadratic classifiers, such as QDA.
+
+But how can we quantify how different two classes
+are with respect to their second-order statistics, in a way
+that is useful for classification?
+SQFA and smSQFA take a geometric perspective to answer this question.
+To explain this, we first take a detour into the geometry of
+symmetric positive definite (SPD) matrices, and then use this
+geometry to explain smSQFA, which is the simpler of the two methods.
+
+
+## The geometric perspective of smSQFA
 
 Symmetric Positive Definite (SPD) matrices are symmetric matrices whose
 eigenvalues are all strictly positive. This type of matrix appears in many
-statistics and machine learning applications. Some important examples
-of SPD matrices are full rank covariance matrices and second moment matrices.
-
-SPD matrices have a number of nice algebraic properties and a rich
-geometrical structure, given that the set of $m \times m$ SPD matrices forms a Riemannian
-manifold denoted $\mathcal{S}^m_{++}$.
-
-The geometry of $\mathcal{S}^m_{++}$ (which is shaped like an open cone
-in the space of symmetric matrices) is very well studied, and there are
-formulas for computing distances, geodesics, means, and other
+statistics and machine learning applications. For example, covariance matrices
+and second-moment matrices are SPD matrices[^1].
+The set of $m \times m$ SPD matrices forms a manifold, denoted $\mathrm{SPD(m)}$.
+The geometry of $\mathrm{SPD(m)}$ (which is shaped like an open cone
+in the space of symmetric matrices) is very well studied, and there
+are different formulas for computing distances, geodesics, means, and other
 geometric quantities in this space.
-SQFA is based on considering second-order statistics
-of the data as points in $\mathcal{S}^m_{++}$, and it leverages this
-geometric perspective for learning filters, as explained below.
 
 :::{admonition} Riemannian manifolds
 Riemannian manifolds are geometric spaces that locally look like Euclidean
@@ -60,36 +108,20 @@ such spaces, like measuring distances, interpolating, finding averages, etc.
 </figure>
 :::
 
-## Classes as points in the SPD manifold
-
-SQFA is a technique for supervised filter learning, or dimensionality
-reduction. This means that given a dataset $\{X_t, y_t\}_{t=1}^N$ where
-$X_t \in \mathbb{R}^n$ are the data points with $n$ dimensions and $y_t$ are the class
-labels, SQFA learns a set of filters, represented by a matrix
-$F \in \mathbb{R}^{n \times m}$, $m<n$, where $m$ is the number of filters.
-These filters are used to transform the data points $X_t$ into a
-lower-dimensional feature space $F^T X_t = Z_t \in \mathbb{R}^m$,
-generating the transformed dataset $\{Z_t, y_t\}_{t=1}^N$ of
-data features. SQFA is supervised because it uses the class labels
-$y_t$ to learn the filters.
-
-In supervised feature learning the goal is to find features that are
-useful for classification or estimation, i.e. that separate the classes well.
-Importantly, such methods need to specify the way in which classes are to be
-separated. The classical example is
-[Linear Discriminant Analysis](https://en.wikipedia.org/wiki/Linear_discriminant_analysis)
-(LDA), which learns linear features that maximize the separation between
-class means, while minimizing the within-class variance in the transformed
-dataset $\{Z_t, y_t\}_{t=1}^N$. Thus, LDA maximizes the first-order differences
-between classes, by maximizing the Euclidean distances between the class means
-$\mu_i = \mathbb{E}[Z | y=i]$ (normalized by the within-class variance).
+As mentioned above, smSQFA focuses on maximizing the quadratic
+discriminability allowed by the class-conditional second-moment
+matrices for the feature vectors $\mathbf{z}_t$,
+denoted $\Psi_i = \mathbb{E}[\mathbf{z}\mathbf{z}^T | y=i]$.
+For this, smSQFA uses the fact that the second-moment matrices
+$\Psi_i$ are symmetric positive definite (SPD) matrices, and
+that they can be seen as points in the SPD manifold $\mathrm{SPD(m)}$.
 
 <figure>
 <p align="center">
   <img src="../_static/sqfa_geometry.svg" width="700">
   <figcaption>
   <b>Geometry of data statistics.</b>
-  <i>SQFA considers the geometry of the second-order statistics of
+  <i>smSQFA considers the geometry of the second-order statistics of
   the data features as points in the SPD manifold. The locations of the
   points in the SPD manifold depends on the filters that are applied to
   the dataset. We use Riemannian geometry to measure the
@@ -98,112 +130,130 @@ $\mu_i = \mathbb{E}[Z | y=i]$ (normalized by the within-class variance).
 </p>
 </figure>
 
-First-order differences, however may not capture all relevant differences
-between classes. SQFA considers the second-order differences between classes,
-which is the obvious next step. How should one represent second-order
-differences between classes? SQFA uses Riemannian geometry to compute
-distances between second-order statistics of the classes in 
-the manifold $\mathcal{S}^n_{++}$. This is analogous to how LDA uses
-Euclidean geometry to compute distances between first order
-statistics (i.e. class means) in Euclidean space.
+What is the advantage of considering the second-moment matrices
+as points in $\mathrm{SPD(m)}$? The key idea is that second-moment
+matrices that are farther apart in the $\mathrm{SPD(m)}$ manifold
+are more different, and thus more discriminable. Thus,
+smSQFA aims to maximize the distances between the second-moment matrices
+$\Psi_i$ in $\mathrm{SPD(m)}$. This is analogous to how LDA
+maximizes the distances between the class means in Euclidean
+space[^2]. The objective of smSQFA can be written as
 
-Consider again the dataset $\{X_t, y_t\}_{t=1}^N$ and its
-feature space representation $\{Z_t, y_t\}_{t=1}^N$ generated by the filters $F$.
-For each class $i$, we can compute the (non-centered) second moment matrix
-of the features $\Psi_i = \mathbb{E}[ZZ^T | y=i]$.
-The matrices $\Psi_i$ are $m \times m$ SPD matrices, and
-so the $q$ matrices $\{\Psi_i\}_{i=1}^q$ define $q$ points in
-the SPD manifold $\mathcal{S}^m_{++}$.
+$U\left(\left\{\Psi_i\right\}_{i=1}^{i=q}\right) = \sum_{i=1}^{c}\sum_{j=1}^{c} d(\Psi_i,\Psi_j),$
 
-The insight behind SQFA is that larger Riemannian distances
-between the second-order statistics of the classes $i$ and $j$
-in the feature space, $d(\Psi_i, \Psi_j)$, are associated with more
-discriminable classes.
+where $d(\Psi_i,\Psi_j)$ is the Riemannian distance between
+the second-moment matrices $\Psi_i$ and $\Psi_j$, and
+$c$ is the number of classes. More specifically, out of the
+many distances that can be defined in $\mathrm{SPD(m)}$, smSQFA uses
+the affine-invariant Riemannian distance, which is related
+to quadratic discriminability. The affine invariance distance
+is given by
+
+$d(\Psi_i,\Psi_j) = \left\| \log(\Psi_i^{-1/2}\Psi_j\Psi_i^{-1/2}) \right\|_F =
+\sum_{k=1}^{m} \log^2(\lambda_k),$
+
+where $\log$ is the matrix logarithm, $\|\cdot\|_F$ is the Frobenius norm,
+and where $\lambda_k$ are the eigenvalues of $\Psi_i^{-1/2}\Psi_j\Psi_i^{-1/2}$,
+or equivalently, the generalized eigenvalues of the
+pair $(\Psi_i, \Psi_j)$. The relationship between the
+affine-invariant distance and quadratic discriminability is
+discussed at length in the [SQFA paper](https://arxiv.org/abs/2502.00168).
+
+With this geometric approach, smSQFA learns filters that
+allow for quadratic discriminability, as shown with different
+examples in the documentation tutorials.
 
 <figure>
 <p align="center">
   <img src="../_static/sqfa_geometry2.svg" width="600">
   <figcaption>
   <b>Manifold distance and discriminability.</b>
-  <i>The idea behind SQFA is that the larger the Riemannian distance
-  between the second moment matrices of the classes, the more different their
-  second-order statistics, and the more discriminable they are. This idea is
-  illustrated in the cartoon, which shows a baseline second-moment matrix as a
-  point in the SPD manifold (grey star), and two trajectories in the manifold
+  <i>The idea behind smSQFA is that the larger the Riemannian distance
+  between the second moment matrices of the classes, 
+  the more discriminable these classes are. This is
+  illustrated in the cartoon, which shows a second-moment matrix as a
+  point in SPD(m) (grey star), and two trajectories in the manifold
   getting away from this baseline (red and blue stars). To the right, the
-  ellipses corresponding to each second-moment matrix are shown. We see that
-  as we go farther from the baseline distribution in the manifold, the second moments
-  become more different from the baseline. In the red trajectory
-  distributions become more different by rotating, and in the blue trajectory
+  ellipses corresponding to each second-moment matrix are shown. 
+  As the stars get farther from the baseline in SPD(m),
+  the ellipses become more different. In the red trajectory distributions
+  become more different by rotating, and in the blue trajectory
   by shrinking.</i>
   </figcaption>
 </p>
 </figure>
 
-SQFA uses as an objective function the sum of the pairwise Riemannian distances
-(or squared distances) between the second moment matrices $\Psi_i$ of all classes, 
-$U\left(\left\{\Psi_i\right\}_{i=1}^{i=q}\right) = \sum_{i=2}^{q}\sum_{j=1}^{i-1} d(\Psi_i,\Psi_j)$.
-It learns the filters $F$ that maximize this objective.
-
 :::{admonition} SQFA input types: Raw data vs statistics
-The discussion in this tutorial takes us from raw data points $\{X_t, y_t\}$
-to the second moments of the features $\{\Psi_i\}_{i=1}^q$. However,
-we can also compute the second moments of the linear features directly from
-the second moments of the data, $C_i = \mathbb{E}[X_t X_t^T | y=i]$,
-using the formula $\Psi_i = F^T C_i F$.
-Thus, SQFA can take as input either the raw data
-points $\{X_t, y_t\}$ or the second moments $\{C_i\}_{i=1}^q$,
-as seen in other tutorials. This can be particularly useful for cases
-where we have access to the second moments but not to the raw data.
+Note that in order to compute the class-conditional means,
+covariances, and second-moment matrices of the features, we
+only need these statistics for the raw data $\mathbf{x}_t$.
+For example, the second-moment matrix $\Psi_i$ can be computed
+as $\Psi_i = F^T \mathbb{E}[\mathbf{x}\mathbf{x}^T |y=i] F$.
+Thus, SQFA only needs the class-conditional statistics of the raw data
+for learning the filters. The `sqfa` package models can
+take either the raw data or the data statistics as input.
 :::
 
 
-## Riemannian metrics relate to discriminability
+## Using first- and second-order statistics
 
-A key remaining question, however, is how to compute the Riemannian distance
-$d(\Psi_i, \Psi_j)$ between two second-moment matrices, and in what way this
-distance is related to the discriminability of the classes.
-There are several Riemannian metrics compatible with $\mathcal{S}^m_{++}$
-that can be used to measure distances between SPD matrices.
-Thus we are faced with the question of which metric to use.
+We have presented the example of smSQFA, which maximizes the
+discriminability based on the second-moment matrices of the
+features. However, second-moment matrices are less informative
+than considering both the means and the covariance matrices
+of the features simultaneously. SQFA considers both the
+means and the covariance matrices of the features, allowing
+to use more information to maximize quadratic discriminability.
 
-The most widely used metric in the $\mathcal{S}^m_{++}$ manifold 
-is the Affine-Invariant Riemannian Metric (AIRM). This metric happens to be
-related to the Fisher information of 0-mean Gaussian distributions,
-which is a measure of the local discriminability of the distributions,
-and to quadratic discriminability. The details are
-beyond the scope of this tutorial, and further developed in the
-[SQFA paper](https://openreview.net/pdf?id=vxdPzM18Xx), but this suggests
-that the AIRM distance is a good choice for learning discriminative features.
-The usefulness of the AIRM
-distance for learning discriminative features is also empirically validated in
-the paper and in the other tutorials.
+Basically, SQFA uses the same geometric perspective as smSQFA, but
+using a different manifold that reflects both means and
+covariances. This is the information-geometry manifold of
+$m$-dimensional Gaussian distributions, denoted
+$\mathcal{M}_{\mathcal{N}}$, where each point
+corresponds to a Gaussian distribution $\mathcal{N}(\mu, \Sigma)$.
+SQFA uses the Fisher-Rao distance to measure the distances
+between the classes.
+Like in the previous case, SQFA computes the means $\mu_i$ and
+covariance matrices $\Sigma_i$ of the features for each class,
+and then it computes the Fisher-Rao distance between the
+Gaussian distributions $\mathcal{N}(\mu_i, \Sigma_i)$ and
+$\mathcal{N}(\mu_j, \Sigma_j)$. SQFA finds the linear
+filters $\mathbf{F}$ that maximize the sum of the
+pairwise Fisher-Rao distances between the classes. The
+link between the Fisher-Rao distance and quadratic discriminability
+is discussed in the [SQFA paper](https://arxiv.org/abs/2502.00168).
 
-:::{admonition} Centered vs non-centered second moments
-:name: centered-vs-non-centered
-Note that the discussion in the tutorial has focused on non-centered second
-moment matrices $\Psi_i = \mathbb{E}[ZZ^T | y=i]$. Alternatively, we could
-consider centered second moment matrices (i.e. covariance matrices),
-which we denote as $\Sigma_i = \mathbb{E}[(Z-\mu_i)(Z-\mu_i)^T | y=i]$.
-The two moments are related by the formula
-$\Psi_i = \Sigma_i + \mu_i \mu_i^T$ (and they are the same when
-$\mu_i=0$).
-
-We focus on non-centered second moments because the distances between
-these matrices more directly relate to the discriminability of the classes
-by a quadratic decoder, as developed in the
-[SQFA paper](https://openreview.net/pdf?id=vxdPzM18Xx). This is because
-the non-centered moments include information about both the means and the
-covariances of the classes.
-
-However, covariance matrices are also SPD matrices and can be used as input
-to SQFA. This can be useful, for example, for using SQFA in conjunction with
-other methods that focus on first-order differences, or when SQFA is used
-to learn features that keep the covariance structure of the data.
+:::{admonition} LDA is a special case of SQFA
+In the SQFA paper we show that LDA is a special case of
+SQFA when all the classes have the same covariance matrix.
+That is, when all the classes have the same covariance
+matrix, LDA maximizes the sum of pairwise Fisher-Rao distances
+between the classes.
 :::
 
-In summary, SQFA leverages the geometric structure of the SPD manifold
-to learn discriminative features by that maximizing the distances between
-the second-order statistics of the classes in $\mathcal{S}^n_{++}$.
-In the next tutorials we will learn how to use the `sqfa` package,
-and how the features learned by SQFA compare to other methods.
+One important final detail to note is that, unlike the
+affine-invariant distance, there is no closed-form
+expression for the Fisher-Rao distance between two Gaussians.
+Thus, SQFA uses an approximation. This approximation,
+sometimes called the
+[Calvo-Oller](https://www.sciencedirect.com/science/article/pii/0047259X9090026E)
+approximation, is a lower bound obtained by embedding
+the means and covariances into the $\mathrm{SPD(m+1)}$ manifold, and
+then computing the affine-invariant distance between
+the embeddings. More detail is given in the SQFA paper.
+
+In summary, SQFA and smSQFA leverage information geometry
+to learn discriminative features by that maximizing the distances
+between the class statistics. In the next tutorials we will learn
+how to use the `sqfa` package, and how the features learned by
+SQFA and smSQFA compare to other methods.
+
+
+[^1]: Covariance and second-moment matrices can sometimes be
+rank deficient, or singular. These matrices are called
+"positive semi-definite" (PSD), and they form a different
+geometric space. This tutorial focuses on the case where second-moment
+matrices are full rank, and thus SPD.
+[^2]: In fact, LDA can be seen as a special case of SQFA where
+all the classes have the same covariance matrix. This is
+developed in the SQFA paper.

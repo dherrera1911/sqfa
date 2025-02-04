@@ -14,14 +14,14 @@ torch.manual_seed(1)
 
 def initialize_model(model_type):
     """Generate a tensor of SPD matrices."""
-    if model_type == "sqfa":
-        model = sqfa.model.SQFA(
+    if model_type == "spd":
+        model = sqfa.model.SecondMomentsSQFA(
             n_dim=N_DIM,
             feature_noise=0.001,
             n_filters=2,
         )
     elif model_type == "fisher":
-        model = sqfa.model.FisherRao(
+        model = sqfa.model.SQFA(
             n_dim=N_DIM,
             feature_noise=0.001,
             n_filters=2,
@@ -29,14 +29,14 @@ def initialize_model(model_type):
     return model
 
 
-@pytest.mark.parametrize("model_type", ["sqfa", "fisher"])
+@pytest.mark.parametrize("model_type", ["spd", "fisher"])
 def test_training_function(model_type):
     """Test the training function in sqfa._optim."""
     covariances = rotated_classes_dataset()
 
     model = initialize_model(model_type)
 
-    if model_type == "sqfa":
+    if model_type == "spd":
         loss, time = sqfa._optim.fitting_loop(
             model=model,
             data_statistics=covariances,
@@ -81,7 +81,7 @@ def test_training_method(feature_noise, n_filters, pairwise):
     """Test the method `.fit` in the sqfa class."""
     covariances = rotated_classes_dataset()
 
-    model = sqfa.model.SQFA(
+    model = sqfa.model.SecondMomentsSQFA(
         n_dim=covariances.shape[-1],
         feature_noise=feature_noise,
         n_filters=n_filters,
@@ -121,7 +121,7 @@ def test_pca_init_points(n_filters, feature_noise):
         n_points=N_POINTS, class_covariances=covariances
     )
 
-    model = sqfa.model.SQFA(
+    model = sqfa.model.SecondMomentsSQFA(
         n_dim=covariances.shape[-1],
         feature_noise=feature_noise,
         n_filters=n_filters,
@@ -153,7 +153,7 @@ def test_pca_init_scatters(n_filters, feature_noise):
     """Test the method `.fit` in the sqfa class."""
     covariances = rotated_classes_dataset()
 
-    model = sqfa.model.SQFA(
+    model = sqfa.model.SecondMomentsSQFA(
         n_dim=covariances.shape[-1],
         feature_noise=feature_noise,
         n_filters=n_filters,

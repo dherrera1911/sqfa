@@ -13,13 +13,20 @@ kernelspec:
 
 # Digit recognition with SQFA
 
-In this tutorial, we compare SQFA to standard dimensionality reduction
-methods in a real-world problem: digit recognition.
-We first show that SQFA separates classes better than PCA and LDA
-in a complex real-world dataset,
-the [Street View House Numbers (SVHN)](http://ufldl.stanford.edu/housenumbers/)
-dataset. We then look at a simpler dataset, [MNIST](http://yann.lecun.com/exdb/mnist/),
-to explore further the difference between the methods.
+In this tutorial, we compare SQFA to standard dimensionality
+reduction methods in digit recognition, using the
+[Street View House Numbers (SVHN)](http://ufldl.stanford.edu/housenumbers/)
+dataset.
+We compare SQFA to different standard methods available
+in the `sklearn` library: PCA, LDA, ICA and Factor Analysis.
+To compare the methods, we test the performance of a
+Quadratic Discriminant Analysis (QDA) classifier
+trained on the features learned by each method.
+
+We will show that SQFA features outperform those learned
+by the other methods, while being learned in approximately
+the same time as LDA filters.
+
 
 ## Street View House Numbers (SVHN) dataset
 
@@ -84,417 +91,193 @@ plt.show()
 ```
 
 We see that we have 10 classes and that the training
-data consists of 73257 samples of 1024 dimensions. We will now apply
-PCA, LDA and SQFA to learn 9 filters for this dataset.
+data consists of 73257 samples of 1024 dimensions. We will now
+learn 9 filters for this dataset, with each of the different
+dimensionality reduction methods to the dataset
 
 :::{admonition} Maximum number of filters
-A limitation of LDA is that it can learn a maximum of $q-1$ filters, where
-$q$ is the number of classes. This is the reason why we learn 9 filters
-in this tutorial. PCA and SQFA do not have this limitation.
+A limitation of LDA is that it can learn a maximum of $c-1$ filters, where
+$c$ is the number of classes. This is the reason why we learn 9 filters
+in this tutorial. SQFA does not have this limitation.
 :::
 
 ```{code-cell} ipython3
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
+from sklearn.decomposition import PCA, FastICA, FactorAnalysis
+from sklearn.cross_decomposition import CCA
 import sqfa
+import time
 
 N_FILTERS = 9
 
+# TRAIN THE DIFFERENT MODELS
+
 # Train PCA
-pca = PCA(n_components=N_FILTERS)
+pca = PCA(n_components=N_FILTERS, svd_solver='covariance_eigh') # Fastest solver
+start = time.time()
 pca.fit(x_train)
+pca_time = time.time() - start
+pca_filters = pca.components_
 
 # Train LDA
-shrinkage = 0.8 # Set to optimize LDA performance and have smoother filters
+shrinkage = 0.8  # Set to optimize LDA performance and have smoother filters
 lda = LinearDiscriminantAnalysis(solver='eigen', shrinkage=shrinkage)
-lda = lda.fit(x_train, y_train)
+start = time.time()
+lda.fit(x_train, y_train)
+lda_time = time.time() - start
+lda_filters = lda.coef_[:N_FILTERS]
+
+# Train ICA
+ica = FastICA(n_components=N_FILTERS, random_state=0, max_iter=1000)
+start = time.time()
+ica.fit(x_train)
+ica_time = time.time() - start
+ica_filters = ica.components_
+
+# Train Factor Analysis
+fa = FactorAnalysis(n_components=N_FILTERS, random_state=0, max_iter=1000)
+start = time.time()
+fa.fit(x_train)
+fa_time = time.time() - start
+fa_filters = fa.components_
 
 # Train SQFA
 # Get noise hyperparameter from PCA variance
 x_pca = torch.as_tensor(pca.transform(x_train))
 pca_var = torch.var(x_pca, dim=0)
-noise = pca_var[2] * 0.1
+noise = pca_var[2] * 0.05
 
 sqfa_model = sqfa.model.SQFA(
   n_dim=x_train.shape[1],
   n_filters=N_FILTERS,
   feature_noise=noise,
-  distance_fun=sqfa.distances.affine_invariant
 )
 
+start = time.time()
 sqfa_model.fit_pca(x_train) # Initialize filters with PCA
-
 sqfa_model.fit(
   x_train,
   y_train,
-  max_epochs=300,
   show_progress=False,
 )
+sqfa_time = time.time() - start
+sqfa_filters = sqfa_model.filters.detach()
 ```
 
 Let's visualize the filters learned by each method.
 
 ```{code-cell} ipython3
+model_names = ["SQFA", "LDA", "PCA", "ICA", "FA"]
+model_filters = [sqfa_filters, lda_filters, pca_filters,
+                 ica_filters, fa_filters]
+
+# Function to plot filters
 def plot_filters(filters, title):
-    fig, ax = plt.subplots(1, N_FILTERS, figsize=(10, 3))
+    fig, ax = plt.subplots(1, N_FILTERS, figsize=(10, 2))
     for i in range(N_FILTERS):
         ax[i].imshow(filters[i].reshape(n_row, n_col), cmap='gray')
         ax[i].axis('off')
         ax[i].set_title(f"Filter {i+1}")
     fig.suptitle(title, fontsize=16)
     plt.tight_layout()
+
+for name, filters in zip(model_names, model_filters):
+    plot_filters(filters, name)
     plt.show()
-
-# PCA filters
-plot_filters(pca.components_, "PCA filters")
-
-# LDA filters
-plot_filters(lda.coef_, "LDA filters")
-
-# SQFA filters
-plot_filters(sqfa_model.filters.detach(), "SQFA filters")
 ```
 
-The features learned by the three models look different. PCA filters look
-smooth, and some structure related to the digits is visible, but this
-structure does not seem visually diverse (most filters look like
-3's and 8's).
-
-LDA filters look less smooth, and although they also seem to capture
-some structure related to the digits, this structure consists of
-some local feature patterns.
-
-SQFA filters, in contrast, look smooth[^1] and capture a set of features that
-look like digits.
-
+The features learned by the three models look different.
+First, unsurprisingly, the filters learned by supervised
+methods LDA and SQFA focus mostly on the digits, while
+the filters learned by the unsupervised methods have
+a considerable fraction of their weights in the background.
+Second, SQFA filters have a more digit-like structure than
+the rest of the methods. 
 
 :::{admonition} Filter initialization
 A good initialization of the filters can considerably speed up
 the learning process. The method `fit_pca` of the `SQFA` class
-sets the filters to the PCA components of the data. For the datasets
-used in this tutorial, training is around 10 times faster with
-PCA initialization than with random initialization, and the final
-results are similar with both initializations. 
+sets the filters to the PCA components of the data.
 :::
 
-
 Lets evaluate the performance of the filters in separating the classes
-by using a quadratic classifier, Quadratic Discriminant Analysis (QDA).
-QDA fits a Gaussian distribution (mean and covariance) to each class and uses
-the Bayes rule to classify samples. Both the first order (class means) and
-second order (class covariances) are used to classify samples.
+by QDA. QDA fits a Gaussian distribution (mean and covariance) to
+each class and uses the Bayes rule to classify samples. Both the
+class specific means and covariances to classify samples.
 
 ```{code-cell} ipython3
-from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-
-def get_qda_accuracy(x_train, y_train, x_test, y_test):
+def get_qda_accuracy(x_train, y_train, x_test, y_test, filters):
     """Fit QDA model to the training data and return the accuracy on the test data."""
+    # Get the features
+    filters = torch.as_tensor(filters, dtype=torch.float)
+    z_train = torch.matmul(x_train, filters.T)
+    z_test = torch.matmul(x_test, filters.T)
+    # Fit QDA model
     qda = QuadraticDiscriminantAnalysis()
-    qda.fit(x_train, y_train)
-    y_pred = qda.predict(x_test)
+    qda.fit(z_train, y_train)
+    y_pred = qda.predict(z_test)
     accuracy = torch.mean(torch.as_tensor(y_pred == y_test.numpy(), dtype=torch.float))
     return accuracy
 
-model_list = [pca, lda, sqfa_model]
 accuracies = []
 
-for model in model_list:
-    with torch.no_grad():
-        x_train_features = model.transform(x_train)
-        x_test_features = model.transform(x_test)
-        accuracy = get_qda_accuracy(x_train_features, y_train, x_test_features, y_test)
-        accuracies.append(accuracy * 100)
+for name, filters in zip(model_names, model_filters):
+    accuracy = get_qda_accuracy(x_train, y_train, x_test, y_test, filters)
+    accuracies.append(accuracy.item() * 100)
 
 # Plot accuracies
-fig, ax = plt.subplots(figsize=(6, 4))
+fig, ax = plt.subplots(figsize=(6, 3))
 plt.bar(range(len(accuracies)), accuracies)
-plt.xticks(range(len(accuracies)), ["PCA", "LDA", "SQFA"])
-plt.title(f"QDA accuracy for different feature extraction methods")
-plt.ylabel("QDA Accuracy (%)")
-plt.xlabel("Features")
+plt.xticks(range(len(accuracies)), model_names, fontsize=12)
+plt.yticks(fontsize=12)
+plt.ylabel("QDA Accuracy (%)", fontsize=14)
+plt.xlabel("Features", fontsize=14)
 # Print the accuracies on top of the bars
 for i, acc in enumerate(accuracies):
-    plt.text(i, acc + 1, f"{acc:.2f}%", ha='center')
+    plt.text(i, acc + 1, f"{acc:.1f}%", ha='center', fontsize=12)
 plt.tight_layout()
+ax.set_ylim([0, 100])
 plt.show()
 ```
 
-We see that for this problem, SQFA outperforms PCA and LDA by a large margin
-in terms of classification accuracy. This indicates that the classes are
-better separated in the feature space learned by SQFA. Similar results
-are obtained when comparing SQFA to other more sophisticated dimensionality
-reduction methods (Independent Component Analysis, Factor Analysis).
+We see that SQFA outperforms all other methods by a large margin
+in terms of classification accuracy. This is not surprising with
+respect to the unsupervised methods, since the goal of these
+methods is not to separate the classes. With respect to LDA,
+it is also not surprising that taking into account the class-conditional
+covariances leads to better performance (although the need to estimate
+a covariance matrix for each class can make SQFA more prone to
+overfitting in the absence of proper regularization).
 
-Why is SQFA so much better than PCA and LDA at separating the classes?
-For the case of PCA, separating classes is not the main goal of the method,
-so it might not be surprising that SQFA features do better. For LDA,
-linear separability of the classes in the main goal. LDA is expected
-to not perform as well as SQFA when the classes are not linearly separable,
-i.e. when the class means are not far apart. Looking at the SVHN stimuli
-above, we can notice that there is considerable nuisance variability
-in the digits. An important source of variability is that the digits
-can have different polarities, i.e. they can be dark digits on a dark background
-or light digits on a dark background. This is going to diminish the
-differences in the class means.
-
-## MNIST dataset
-
-The MNIST dataset is a simpler dataset than SVHN. An important difference
-is that in MNIST the digits are more uniformly centered and scaled,
-and they always have the same polarity: white digits on a black background.
-This means that first-order differences between classes are larger, and
-even single pixels can do a good job at separating pairs of classes.
-
-Let's compare PCA, LDA and SQFA in this dataset.
+SQFA learned the best filters for quadratic discrimination in
+this task, but is its computational cost reasonable? Let's compare
+the time it took to learn the filters for each method.
 
 ```{code-cell} ipython3
-:tags: [remove-output]
-# Load MNIST
-trainset = torchvision.datasets.MNIST(root='./data', train=True, download=True)
-testset = torchvision.datasets.MNIST(root='./data', train=False, download=True)
+model_times = [sqfa_time, lda_time, pca_time, ica_time, fa_time]
 
-n_samples, n_row, n_col = trainset.data.shape
-n_dim = n_row * n_col
-x_train = trainset.data.reshape(-1, n_dim).float()
-y_train = trainset.targets
-x_test = testset.data.reshape(-1, n_dim).float()
-y_test = testset.targets
-
-# Scale data and subtract global mean
-x_train, x_test = scale_and_center(x_train, x_test)
-```
-
-```{code-cell} ipython3
-# See how many dimensions, samples and classes we have
-print(f"Number of dimensions: {x_train.shape[1]}")
-print(f"Number of samples: {x_train.shape[0]}")
-print(f"Number of classes: {len(torch.unique(y_train))}")
-print(f"Number of test samples: {x_test.shape[0]}")
-
-# Visualize some of the centered images
-names = y_train.unique().tolist()
-n_classes = len(y_train.unique())
-fig, ax = plt.subplots(1, n_classes, figsize=(10, 2))
-for i in range(n_classes):
-    ax[i].imshow(x_train[y_train == i][20].reshape(n_row, n_col), cmap='gray')
-    ax[i].axis('off')
-    ax[i].set_title(names[i], fontsize=10)
+fig, ax = plt.subplots(figsize=(6, 3))
+plt.bar(range(len(model_times)), model_times)
+plt.xticks(range(len(model_times)), model_names, fontsize=12)
+plt.yticks(fontsize=12)
+plt.ylabel("Training Time (s)", fontsize=14)
+plt.xlabel("Model", fontsize=14)
+# Make y axis logarithmic
+plt.yscale('log')
+# Print the times on top of the bars
+for i, training_time in enumerate(model_times):
+    plt.text(i, training_time * 1.5, f"{training_time:.2f}", ha='center', fontsize=12)
 plt.tight_layout()
+plt.ylim([min(model_times)*0.5, max(model_times) * 5])
 plt.show()
 ```
 
-We see that the MNIST stimuli are a lot cleaner than the SVHN stimuli.
-Let's now apply PCA, LDA and SQFA to learn 9 filters for this dataset
-and visualize the filters.
+We see that SQFA took approximately the same time as LDA to learn the
+filters. The relative cost will depend on, but the fact that
+SQFA is on par with LDA in terms of computational cost indicate that
+it can be a good tool to use in practice.
 
-```{code-cell} ipython3
-# Train PCA
-pca = PCA(n_components=N_FILTERS)
-pca.fit(x_train)
+In conclusion, SQFA can learn features that allow to discriminate
+between classes in complex real-world datasets, and it can do so
+at low computational cost.
 
-# Train LDA
-shrinkage = 0.8 # Set to optimize LDA performance and have smoother filters
-lda = LinearDiscriminantAnalysis(solver='eigen', shrinkage=shrinkage)
-lda = lda.fit(x_train, y_train)
-
-# Train SQFA
-# Get noise hyperparameter from PCA variance
-x_pca = torch.as_tensor(pca.transform(x_train))
-pca_var = torch.var(x_pca, dim=0)
-noise = pca_var[2] * 0.5
-
-sqfa_model = sqfa.model.SQFA(
-  n_dim=x_train.shape[1],
-  n_filters=N_FILTERS,
-  feature_noise=noise,
-  distance_fun=sqfa.distances.affine_invariant
-)
-
-sqfa_model.fit_pca(x_train) # Initialize filters with PCA
-
-sqfa_model.fit(
-  x_train,
-  y_train,
-  max_epochs=300,
-  show_progress=False
-)
-
-# PCA filters
-plot_filters(pca.components_, "PCA filters")
-
-# LDA filters
-plot_filters(lda.coef_, "LDA filters")
-
-# SQFA filters
-plot_filters(sqfa_model.filters.detach(), "SQFA filters")
-```
-
-We see that now the LDA filters capture clear digit structures. SQFA filters
-capture some digit structure, but to a lesser extent than LDA filters.
-Let's evaluate the performance of the filters in separating the classes.
-
-```{code-cell} ipython3
-model_list = [pca, lda, sqfa_model]
-accuracies = []
-
-for model in model_list:
-    with torch.no_grad():
-        x_train_features = model.transform(x_train)
-        x_test_features = model.transform(x_test)
-        accuracy = get_qda_accuracy(x_train_features, y_train, x_test_features, y_test)
-        accuracies.append(accuracy * 100)
-
-# Plot accuracies
-fig, ax = plt.subplots(figsize=(6, 4))
-plt.bar(range(len(accuracies)), accuracies)
-plt.xticks(range(len(accuracies)), ["PCA", "LDA", "SQFA"])
-plt.title(f"QDA accuracy for different feature extraction methods")
-plt.ylabel("QDA Accuracy (%)")
-plt.xlabel("Features")
-# Print the accuracies on top of the bars
-for i, acc in enumerate(accuracies):
-    plt.text(i, acc + 1, f"{acc:.2f}%", ha='center')
-plt.tight_layout()
-plt.show()
-```
-
-We see that, for this problem, LDA and SQFA features perform similarly,
-although LDA features perform slightly better. This means that the
-classes are well separated linearly, and in this case SQFA may not
-separate the data better than LDA.[^2]
-
-## Random polarity MNIST
-
-To finalize the analysis, lets create a new version of the MNIST dataset
-where the polarity of the digits is random. This will make the dataset more
-complex, and reduce the first order differences between classes.
-
-```{code-cell} ipython3
-# Get un-preprocessed MNIST again
-x_train = trainset.data.reshape(-1, n_dim).float()
-y_train = trainset.targets
-x_test = testset.data.reshape(-1, n_dim).float()
-y_test = testset.targets
-
-# Randomly revert the polarity for half of the images
-inds = torch.randint(0, 2, (len(y_train),))
-x_train[inds==0] = - x_train[inds==0]
-inds = torch.randint(0, 2, (len(y_test),))
-x_test[inds==0] = - x_test[inds==0]
-
-# Scale data and subtract global mean
-x_train, x_test = scale_and_center(x_train, x_test)
-
-# Visualize some of the centered images
-names = y_train.unique().tolist()
-n_classes = len(y_train.unique())
-min = x_train.min()
-max = x_train.max()
-
-fig, ax = plt.subplots(1, n_classes, figsize=(10, 2))
-for i in range(n_classes):
-    ax[i].imshow(x_train[y_train == i][20].reshape(n_row, n_col), cmap='gray',
-                 vmin=min, vmax=max)
-    ax[i].axis('off')
-    ax[i].set_title(names[i], fontsize=10)
-plt.tight_layout()
-plt.show()
-```
-
-Let's now apply PCA, LDA and SQFA to learn 9 filters for this dataset.
-
-```{code-cell} ipython3
-# Train PCA
-pca = PCA(n_components=N_FILTERS)
-pca.fit(x_train)
-
-# Train LDA
-shrinkage = 0.7 # Set to optimize LDA performance and have smoother filters
-lda = LinearDiscriminantAnalysis(solver='eigen', shrinkage=shrinkage)
-lda = lda.fit(x_train, y_train)
-
-# Train SQFA
-# Get noise hyperparameter from PCA variance
-x_pca = torch.as_tensor(pca.transform(x_train))
-pca_var = torch.var(x_pca, dim=0)
-noise = pca_var[2] * 0.5
-
-sqfa_model = sqfa.model.SQFA(
-  n_dim=x_train.shape[1],
-  n_filters=N_FILTERS,
-  feature_noise=noise,
-  distance_fun=sqfa.distances.affine_invariant
-)
-
-sqfa_model.fit_pca(x_train) # Initialize filters with PCA
-
-sqfa_model.fit(
-  x_train,
-  y_train,
-  max_epochs=300,
-  show_progress=False
-)
-
-# PCA filters
-plot_filters(pca.components_, "PCA filters")
-
-# LDA filters
-plot_filters(lda.coef_, "LDA filters")
-
-# SQFA filters
-plot_filters(sqfa_model.filters.detach(), "SQFA filters")
-```
-
-We see that LDA filters capture some digit structures although this is
-embedded in a lot of noise. SQFA filters, again, capture only some
-digit structure. Let's evaluate the performance of the filters in separating
-the classes.
-
-```{code-cell} ipython3
-model_list = [pca, lda, sqfa_model]
-accuracies = []
-
-for model in model_list:
-    with torch.no_grad():
-        x_train_features = model.transform(x_train)
-        x_test_features = model.transform(x_test)
-        accuracy = get_qda_accuracy(x_train_features, y_train, x_test_features, y_test)
-        accuracies.append(accuracy * 100)
-
-# Plot accuracies
-fig, ax = plt.subplots(figsize=(6, 4))
-plt.bar(range(len(accuracies)), accuracies)
-plt.xticks(range(len(accuracies)), ["PCA", "LDA", "SQFA"])
-plt.title(f"QDA accuracy for different feature extraction methods")
-plt.ylabel("QDA accuracy (%)")
-plt.xlabel("Features")
-# Print the accuracies on top of the bars
-for i, acc in enumerate(accuracies):
-    plt.text(i, acc + 1, f"{acc:.2f}%", ha='center')
-plt.tight_layout()
-plt.show()
-```
-
-We see that, for the dataset of MNIST with random polarity, SQFA features
-outperform LDA features by a large margin. This is consistent with the
-fact that the classes should have low linear separability in this dataset.
-SQFA features also outperform PCA features, although by a smaller margin.
-This result shows that feature learning with SQFA can be more invariant
-that with LDA, in this particular case shown with the example of
-digit polarity variability in MNIST.
-
-In summary, we have shown that SQFA can outperform PCA and LDA in separating
-classes in a complex real-world dataset, the SVHN dataset. In simpler datasets,
-with more linearly separable classes, SQFA may not outperform LDA.
-Thus, the choice of dimensionality reduction method should be made
-considering the complexity of the dataset and the goal of the analysis.
-
-
-[^1]: We note that the smoothness of both LDA and SQFA filters depends on the
-hyperparameters. For LDA, we obtain smoother filters with higher shrinkage parameter,
-and for SQFA we obtain smoother filters with higher noise parameter. However,
-in general LDA filters tend to be less smooth than PCA and SQFA filters.
-[^2]: Note that the noise hyperparameter is different in the SVHN and MNIST datasets.
-Performance of SQFA features learned for the MNIST dataset is sensitive to this
-parameter. With lower noise values, SQFA features perform considerably worse
-than LDA features.
