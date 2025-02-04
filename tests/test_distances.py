@@ -6,8 +6,8 @@ import torch
 from make_examples import sample_spd
 from sqfa.distances import (
     affine_invariant_sq,
-    log_euclidean_sq,
     fisher_rao_lower_bound_sq,
+    log_euclidean_sq,
 )
 
 torch.set_default_dtype(torch.float64)
@@ -18,6 +18,7 @@ def sample_spd_matrices(n_classes, n_dim):
     """Generate a tensor of SPD matrices."""
     spd_mat = sample_spd(n_classes, n_dim)
     return spd_mat
+
 
 @pytest.fixture(scope="function")
 def sample_vectors(n_classes, n_dim):
@@ -115,4 +116,3 @@ def test_fisher_rao_sq(sample_spd_matrices, sample_vectors, n_classes, n_dim):
     assert torch.allclose(
         get_diag(fr_distances), torch.zeros(n_classes), atol=1e-5
     ), "The diagonal of the self-distance matrix for AIRM is not zero"
-

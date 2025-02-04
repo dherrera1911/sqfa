@@ -168,6 +168,7 @@ def fisher_rao_lower_bound_sq(means, covariances):
     distance_squared = affine_invariant_sq(embedding, embedding)
     return distance_squared
 
+
 def fisher_rao_lower_bound(means, covariances):
     """
     Compute the Calvo & Oller lower bound of the Fisher-Rao squared
@@ -186,4 +187,3 @@ def fisher_rao_lower_bound(means, covariances):
         Shape (n_classes, n_classes), the lower bound of the Fisher-Rao distance.
     """
     return torch.sqrt(fisher_rao_lower_bound_sq(means, covariances) + EPSILON)
-

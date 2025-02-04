@@ -89,9 +89,11 @@ def _check_statistics(data_statistics):
 
 
 class SecondMomentsSQFA(nn.Module):
-    """Second-moments Supervised Quadratic Feature Analysis (SQFA) model.
+    """
+    Second-moments Supervised Quadratic Feature Analysis (SQFA) model.
     This version of the model uses only the second moment matrices of the data,
-    and distances in the SPD manifold."""
+    and distances in the SPD manifold.
+    """
 
     def __init__(
         self,
@@ -319,7 +321,7 @@ class SecondMomentsSQFA(nn.Module):
 
             # Store initial filters
             filters_original = self.filters.detach().clone()
-            noise_original = self.diagonal_noise.detach().clone()[0,0]
+            noise_original = self.diagonal_noise.detach().clone()[0, 0]
 
             # Require n_pairs to be even
             if self.filters.shape[0] % 2 != 0:
@@ -332,7 +334,6 @@ class SecondMomentsSQFA(nn.Module):
             training_time = torch.tensor([])
             filters_last_trained = torch.zeros(0)
             for i in range(n_pairs):
-
                 # Re-initialize filters, to be a tensor of shape (2*(i+1), n_dim)
                 # with the first 2*i filters being the filters from the previous
                 # iteration
@@ -340,10 +341,9 @@ class SecondMomentsSQFA(nn.Module):
                 if i == 0:
                     filters_new_init = filters_original[:2]
                 else:
-                    filters_new_init = torch.cat((
-                        filters_last_trained,
-                        filters_original[2 * i : 2 * (i + 1)]
-                    ))
+                    filters_new_init = torch.cat(
+                        (filters_last_trained, filters_original[2 * i : 2 * (i + 1)])
+                    )
                 remove_parametrizations(self, "filters")
                 self.filters = nn.Parameter(filters_new_init)
                 self._add_constraint(constraint=self.constraint)

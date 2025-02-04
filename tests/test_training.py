@@ -58,8 +58,8 @@ def test_training_function(model_type):
             )
         # Make dictionary with covariance and means input
         stats_dict = {
-          "covariances": covariances,
-          "means": torch.zeros_like(covariances[:,:,0]),
+            "covariances": covariances,
+            "means": torch.zeros_like(covariances[:, :, 0]),
         }
         loss, time = sqfa._optim.fitting_loop(
             model=model,
