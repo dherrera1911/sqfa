@@ -115,7 +115,7 @@ def log_euclidean(A, B):
     return torch.sqrt(log_euclidean_sq(A, B) + EPSILON)
 
 
-def _embed_gaussian(means, covariances):
+def _embed_gaussian(statistics):
     """
     Embed the parameters of the Gaussian distribution in SPD,
     by stacking the means and the covariances in the format
@@ -124,16 +124,21 @@ def _embed_gaussian(means, covariances):
 
     Parameters
     ----------
-    means : torch.Tensor
-        Shape (n_classes, n_filters), the means.
-    covariances : torch.Tensor
-        Shape (n_classes, n_filters, n_filters), the covariance matrices.
+    statistics: dict
+        Dictionary containing the means and covariances of the Gaussian
+        distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
 
     Returns
     -------
     embedding : torch.Tensor
         Shape (n_classes, n_filters+1, n_filters+1), the embedded SPD matrices.
     """
+    means = statistics["means"]
+    covariances = statistics["covariances"]
+
     n_classes, n_filters = means.shape
 
     mean_outer_prod = torch.einsum("ni,nj->nij", means, means)
@@ -146,17 +151,25 @@ def _embed_gaussian(means, covariances):
     return embedding
 
 
-def fisher_rao_lower_bound_sq(means, covariances):
+def fisher_rao_lower_bound_sq(statistics_A, statistics_B):
     """
     Compute the Calvo & Oller lower bound of the Fisher-Rao squared
     distance between Gaussians.
 
     Parameters
     ----------
-    means : torch.Tensor
-        Shape (n_classes, n_filters), the means.
-    covariances : torch.Tensor
-        Shape (n_classes, n_filters, n_filters), the covariance matrices.
+    statistics_A: dict
+        Dictionary containing the means and covariances of the first
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+    statistics_B: dict
+        Dictionary containing the means and covariances of the second
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
 
     Returns
     -------
@@ -164,26 +177,38 @@ def fisher_rao_lower_bound_sq(means, covariances):
         Shape (n_classes, n_classes), the lower bound of the Fisher-Rao squared
         distance.
     """
-    embedding = _embed_gaussian(means, covariances)
-    distance_squared = affine_invariant_sq(embedding, embedding)
+    embedding_A = _embed_gaussian(statistics_A)
+    embedding_B = _embed_gaussian(statistics_B)
+    distance_squared = affine_invariant_sq(embedding_A, embedding_B)
     return distance_squared
 
 
-def fisher_rao_lower_bound(means, covariances):
+def fisher_rao_lower_bound(statistics_A, statistics_B):
     """
     Compute the Calvo & Oller lower bound of the Fisher-Rao squared
     distance between Gaussians.
 
     Parameters
     ----------
-    means : torch.Tensor
-        Shape (n_classes, n_filters), the means.
-    covariances : torch.Tensor
-        Shape (n_classes, n_filters, n_filters), the covariance matrices.
+    statistics_A: dict
+        Dictionary containing the means and covariances of the first
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+    statistics_B: dict
+        Dictionary containing the means and covariances of the second
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
 
     Returns
     -------
     distance : torch.Tensor
         Shape (n_classes, n_classes), the lower bound of the Fisher-Rao distance.
     """
-    return torch.sqrt(fisher_rao_lower_bound_sq(means, covariances) + EPSILON)
+    distances_squared = fisher_rao_lower_bound_sq(
+      statistics_A, statistics_B
+    )
+    return torch.sqrt(distances_squared + EPSILON)

@@ -287,7 +287,7 @@ class SecondMomentsSQFA(nn.Module):
             Learning rate for the optimizer. Default is 0.1.
         estimator:
             Covariance estimator to use. Options are "empirical",
-            and "oas". Default is "oas".
+            and "oas". Default is "empirical".
         pairwise : bool
             If True, then filters are optimized pairwise (the first 2 filters
             are optimized together, then held fixed and the next 2 filters are
@@ -413,6 +413,7 @@ class SQFA(SecondMomentsSQFA):
         feature_noise=0,
         n_filters=2,
         filters=None,
+        distance_fun=None,
         constraint="sphere",
     ):
         """
@@ -435,12 +436,15 @@ class SQFA(SecondMomentsSQFA):
             Constraint to apply to the filters. Can be 'none', 'sphere' or
             'orthogonal'. Default is 'sphere'.
         """
+        if distance_fun is None:
+            distance_fun = fisher_rao_lower_bound
+
         super().__init__(
             n_dim=n_dim,
             feature_noise=feature_noise,
             n_filters=n_filters,
             filters=filters,
-            distance_fun=fisher_rao_lower_bound,
+            distance_fun=distance_fun,
             constraint=constraint,
         )
 
@@ -465,7 +469,7 @@ class SQFA(SecondMomentsSQFA):
         """
         if not isinstance(data_statistics, dict):
             raise ValueError(
-                "Fisher-Rao distance requires class statistics dictionary as input"
+                "data_statistics must be a dictionary with 'means' and 'covariances' keys."
             )
         # Compute feature statistics
         feature_means = self.transform(data_statistics["means"])
@@ -474,7 +478,14 @@ class SQFA(SecondMomentsSQFA):
         if regularized:
             feature_covariances = feature_covariances + self.diagonal_noise[None, :, :]
 
-        distances = self.distance_fun(feature_means, feature_covariances)
+        feature_statistics = {
+          "means": feature_means,
+          "covariances": feature_covariances,
+        }
+
+        distances = self.distance_fun(
+          feature_statistics, feature_statistics
+        )
         return distances
 
     def fit(
@@ -484,7 +495,7 @@ class SQFA(SecondMomentsSQFA):
         data_statistics=None,
         max_epochs=300,
         lr=0.1,
-        estimator="oas",
+        estimator="empirical",
         pairwise=False,
         show_progress=True,
         return_loss=False,
@@ -509,7 +520,7 @@ class SQFA(SecondMomentsSQFA):
             Learning rate for the optimizer. Default is 0.1.
         estimator:
             Covariance estimator to use. Options are "empirical",
-            and "oas". Default is "oas".
+            and "oas". Default is "empirical".
         pairwise : bool
             If True, then filters are optimized pairwise (the first 2 filters
             are optimized together, then held fixed and the next 2 filters are
@@ -529,7 +540,7 @@ class SQFA(SecondMomentsSQFA):
         else:
             if not isinstance(data_statistics, dict):
                 raise ValueError(
-                    "Fisher-Rao distance requires class statistics dictionary or X and y as input"
+                    "data_statistics must be a dictionary with 'means' and 'covariances' keys."
                 )
             _check_statistics(data_statistics)
 

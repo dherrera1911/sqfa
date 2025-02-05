@@ -101,8 +101,12 @@ def test_fisher_rao_sq(sample_spd_matrices, sample_vectors, n_classes, n_dim):
     """Test the generalized eigenvalues function."""
     spd_mat = sample_spd_matrices
     means = sample_vectors
+    stats_dict = {
+        "means": means,
+        "covariances": spd_mat,
+    }
 
-    fr_distances = fisher_rao_lower_bound_sq(means=means, covariances=spd_mat)
+    fr_distances = fisher_rao_lower_bound_sq(stats_dict, stats_dict)
 
     if n_classes != 1:
         assert fr_distances.shape == (n_classes, n_classes)
