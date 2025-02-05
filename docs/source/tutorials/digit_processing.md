@@ -14,9 +14,8 @@ kernelspec:
 # Digit recognition with SQFA
 
 In this tutorial, we compare SQFA to standard dimensionality
-reduction methods in digit recognition, using the
-[Street View House Numbers (SVHN)](http://ufldl.stanford.edu/housenumbers/)
-dataset.
+reduction methods using the digit recognition dataset
+[Street View House Numbers (SVHN)](http://ufldl.stanford.edu/housenumbers/).
 We compare SQFA to different standard methods available
 in the `sklearn` library: PCA, LDA, ICA and Factor Analysis.
 To compare the methods, we test the performance of a
@@ -92,8 +91,8 @@ plt.show()
 
 We see that we have 10 classes and that the training
 data consists of 73257 samples of 1024 dimensions. We will now
-learn 9 filters for this dataset, with each of the different
-dimensionality reduction methods to the dataset
+learn 9 filters for this dataset using each of the different
+dimensionality reduction methods.
 
 :::{admonition} Maximum number of filters
 A limitation of LDA is that it can learn a maximum of $c-1$ filters, where
@@ -200,10 +199,12 @@ the learning process. The method `fit_pca` of the `SQFA` class
 sets the filters to the PCA components of the data.
 :::
 
-Lets evaluate the performance of the filters in separating the classes
-by QDA. QDA fits a Gaussian distribution (mean and covariance) to
+Lets evaluate how well the filters separate the classes quadratically,
+by using a QDA classifier on each feature set.
+QDA fits a Gaussian distribution (mean and covariance) to
 each class and uses the Bayes rule to classify samples. Both the
-class specific means and covariances to classify samples.
+class specific means and covariances are used
+to classify samples.
 
 ```{code-cell} ipython3
 def get_qda_accuracy(x_train, y_train, x_test, y_test, filters):

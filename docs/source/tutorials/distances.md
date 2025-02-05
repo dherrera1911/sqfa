@@ -15,11 +15,11 @@ kernelspec:
 
 In the [geometry tutorial](https://sqfa.readthedocs.io/en/latest/tutorials/spd_geometry.html)
 we explained the geometric intuition behind SQFA and smSQFA.
-Without much justification, we proposed using the affine invariant
+Without much motivation, we proposed using the affine invariant
 distance in the SPD manifold for smSQFA, and the Fisher-Rao distance
 in the manifold of normal distributions for SQFA.
 In the [SQFA paper](https://arxiv.org/abs/2502.00168) we provide
-a theoretical and empirical justification for this choice.
+a theoretical and empirical motivation for this choice.
 However, there are other possible distances
 (or discriminability measures, or divergences) that could
 be used instead, either for practical or theoretical reasons.
@@ -79,28 +79,30 @@ This means that, when using the Fisher-Rao metric, the length of
 a curve is given by the accumulated discriminability of the
 infinitesimal changes along the curve.
 
-Interestingly, the AIRM metric for SPD matrices is equivalent to the
-Fisher-Rao metric for zero-mean Gaussian distributions. Thus, the AIRM
-distance applied to second-moment matrices has some intepretability in
-terms of probability distributions: it tells us how discriminable
-are the infinitesimal changes transforming the zero-mean Gaussian
-given by $\mathbf{A}$ into the zero-mean Gaussian given by $\mathbf{B}$.
+Interestingly, the affine invariant metric for SPD matrices is equivalent to the
+Fisher-Rao metric for zero-mean Gaussian distributions. Thus, the
+affine invariant distance applied to second-moment matrices has
+some intepretability in terms of probability distributions:
+it is the accumulated discriminability of the infinitesimal changes
+transforming $\mathcal{N}(\mathbf{0}, \mathbf{A})$ into
+$\mathcal{N}(\mathbf{0}, \mathbf{B})$.
 :::
 
 The Bures-Wasserstein distance between two SPD matrices
 $\mathbf{A}$ and $\mathbf{B}$ is defined as:
 $d_{BW}(\mathbf{A}, \mathbf{B}) =
-\sqrt{ \text{tr}(\mathbf{A}) + \text{tr}(\mathbf{B}) -
+\sqrt{ \text{Tr}(\mathbf{A}) + \text{tr}(\mathbf{B}) -
 2 \text{tr}(\sqrt{\mathbf{A}^{1/2} \mathbf{B} \mathbf{A}^{1/2}}) }$
 
-where $\text{tr}$ is the trace. 
+where $\text{Tr}$ is the trace. 
 
 :::{admonition} Bures-Wasserstein distance and optimal transport
 :name: optimal-transport
 Like the affine invariant distance, the Bures-Wasserstein distance
 in the SPD manifold has an interpretation
-in terms of Gaussian distributions. Specifically, the BW distance between two
-SPD matrices $\mathbf{A}$ and $\mathbf{B}$ is the optimal transport distance
+in terms of Gaussian distributions. Specifically, the Bures-Wasserstein
+distance between two SPD matrices
+$\mathbf{A}$ and $\mathbf{B}$ is the optimal transport distance
 between the two zero-mean Gaussian distributions
 $\mathcal{N}(\mathbf{0}, \mathbf{A})$ and $\mathcal{N}(\mathbf{0}, \mathbf{B})$.
 
@@ -111,14 +113,13 @@ Gaussian distribution given by $\mathcal{N}(\mathbf{0}, \mathbf{A})$
 is a pile of dirt. The Bures-Wasserstein distance is the cost of
 moving that pile of dirt into the shape given by
 $\mathcal{N}(\mathbf{0}, \mathbf{B})$.
+From the earth mover's perspective we can get some intuition
+about the Bures-Wasserstein distance. For example,
+that it is not invariant to scaling: if we scale up the distributions,
+need to move the dirt across larger distances, increasing the cost.
 
 Optimal transport distances are a popular tool in machine learning,
 and sometimes have advantages with respect to the Fisher-Rao distances.
-
-From the earth mover's perspective, it is easy to see that the
-Bures-Wasserstein distance is not scale-invariant: if we scale up
-the distributions, we need to move the dirt across larger distances,
-increasing the cost.
 :::
 
 ### Implementing the Bures-Wasserstein distance
@@ -435,6 +436,7 @@ Calvo and Oller (1990)[^3^].
 This approximation is implemented in `sqfa.distances.fisher_rao_lower_bound()`.
 [^3^]: Calvo, B., & Oller, J. (1990). "A distance between multivariate normal distributions based in an embedding into the siegel group." In Journal of Multivariate Analysis (Vol 35, Issue 2, pp 223-242).
 
-
-
+Currently, the functionality of using custom distance functions
+with the SQFA method is no implemented in `sqfa`, but it will
+be implemented soon.
 

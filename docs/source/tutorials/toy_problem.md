@@ -31,18 +31,20 @@ but different covariance matrices that allow for good quadratic
 separability of the classes. The covariances of the classes
 are rotated versions of each other.
 The differences in covariances make this space preferred by
-SQFA and smSQFA. Because the means are the same,
+SQFA and smSQFA. But because the means are the same,
 this subspace is not preferred by LDA. The overall variance
 in this subspace is moderate, so PCA does not prefer it either.
 2) Dimensions 3 and 4 have slightly different means for the classes,
 but the same covariance matrix. The differences in means make this
 space preferred by LDA. The overall variance in this subspace
-is moderate so, PCA does not prefer it. The differences in means
-are small, so this subspace is not very discriminative.
+is moderate, so PCA does not prefer it. The differences in the
+class means are small, so this subspace is not very discriminative.
 3) Dimensions 5 and 6 have the same mean and covariance matrix
 for all classes, but high overall variance. This space is
 preferred by PCA. This subspace is not preferred by SQFA or LDA
 because it is not discriminative.
+
+The three subspaces will be made clear in the plots below.
 
 
 ## Implementation of the toy problem
