@@ -2,9 +2,9 @@ name: Publish to PyPI
 on:
   release:
     types: [published]
-  push:
-    branches:
-      - main
+#  push:
+#    branches:
+#      - main
 jobs:
   # setup build separate from publish
   # See https://github.com/pypa/gh-action-pypi-publish/issues/217#issuecomment-1965727093
