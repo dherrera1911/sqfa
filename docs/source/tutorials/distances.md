@@ -91,8 +91,8 @@ $\mathcal{N}(\mathbf{0}, \mathbf{B})$.
 The Bures-Wasserstein distance between two SPD matrices
 $\mathbf{A}$ and $\mathbf{B}$ is defined as:
 $d_{BW}(\mathbf{A}, \mathbf{B}) =
-\sqrt{ \text{Tr}(\mathbf{A}) + \text{tr}(\mathbf{B}) -
-2 \text{tr}(\sqrt{\mathbf{A}^{1/2} \mathbf{B} \mathbf{A}^{1/2}}) }$
+\sqrt{ \text{Tr}(\mathbf{A}) + \text{Tr}(\mathbf{B}) -
+2 \text{Tr}(\sqrt{\mathbf{A}^{1/2} \mathbf{B} \mathbf{A}^{1/2}}) }$
 
 where $\text{Tr}$ is the trace. 
 
@@ -143,15 +143,19 @@ in `sqfa`:
    output should have shape `(batch_A, batch_B)`.
 
 Let's implement a function to compute the Bures-Wasserstein
-distance that satisfies these requirements[^2^]:
+distance that satisfies these requirements[^2^] (we implement
+separate functions for the squared distance and the distance,
+which will be convenient later):
 [^2^]: For efficiency in implementing the squared distance we use a couple of linear algebra tricks. First, we use that $\text{tr}(M)$ is the sum of the eigenvalues of $M$. Then, we use that $A^{1/2} B A^{1/2}$ is SPD, because $A^{1/2}$ is symmetric, and any SPD matrix $M$ and invertible matrix $G$ satisfy that $G M G^T$ is SPD. Finally, we use that for an SPD matrix $M$, the eigenvalues of $\sqrt{M}$ are the square roots of the eigenvalues of $M$. Thus, we have that $\text{tr}(A^{1/2} B A^{1/2}) = \sum_i \lambda_i^{1/2}$, where $\lambda_i$ are the eigenvalues of $A^{1/2} B A^{1/2}$.
 
 ```{code-cell} ipython
 import torch
 import sqfa
 
+torch.manual_seed(9) # Set seed for reproducibility
+
 # IMPLEMENT BURES WASSERSTEIN SQUARED DISTANCE
-def bw_distance(A, B):
+def bw_distance_sq(A, B):
     """Compute the Bures-Wasserstein distance between all pairs
     of matrices in A and B."""
     tr_A = torch.einsum('ijj->i', A)
@@ -163,9 +167,14 @@ def bw_distance(A, B):
     tr_C = torch.sum(C_sqrt_eigvals, dim=-1)
 
     bw_distance_sq = tr_A[None,:] + tr_B[:,None] - 2 * tr_C # Use batch broadcasting
-    bw_distance = torch.sqrt(torch.abs(bw_distance_sq) + 1e-6) # Add epsilon for gradient stability
 
-    return bw_distance
+    return bw_distance_sq
+
+# IMPLEMENT BURES WASSERSTEIN DISTANCE
+def bw_distance(A, B):
+    """Compute the Bures-Wasserstein distance between all pairs
+    of matrices in A and B."""
+    return torch.sqrt(torch.abs(bw_distance_sq(A, B)) + 1e-6) # Add epsilon for gradient stability
 ```
 
 ### Toy problem to compare distances
@@ -330,7 +339,7 @@ For this, we use the `distance_fun` argument of the
 `sqfa.model.SecondMomentsSQFA` class, which implements smSQFA.
 
 ```{code-cell} ipython
-noise = 0.001 # Regularization noise
+noise = 0.01 # Regularization noise
 n_dim = class_covariances.shape[-1]
 
 # LEARN FILTERS WITH AI DISTANCE
@@ -436,7 +445,257 @@ Calvo and Oller (1990)[^3^].
 This approximation is implemented in `sqfa.distances.fisher_rao_lower_bound()`.
 [^3^]: Calvo, B., & Oller, J. (1990). "A distance between multivariate normal distributions based in an embedding into the siegel group." In Journal of Multivariate Analysis (Vol 35, Issue 2, pp 223-242).
 
-Currently, the functionality of using custom distance functions
-with the SQFA method is no implemented in `sqfa`, but it will
-be implemented soon.
+### Implementing the Wasserstein distance in $\mathcal{M}_{\mathcal{N}}$
+
+Let's implement the Wasserstein L2 distance in $\mathcal{M}_{\mathcal{N}}$.
+This distance is given by 
+$d_{W}(\mathcal{N}(\mu_i, \Sigma_i), \mathcal{N}(\mu_j, \Sigma_j)) =
+\sqrt{ \| \mu_i - \mu_j \|^2 +
+\text{Tr}(\mathbf{\Sigma_i}) + \text{Tr}(\mathbf{\Sigma_j}) -
+2 \text{tr}(\sqrt{\mathbf{\Sigma_i}^{1/2} \mathbf{\Sigma_j} \mathbf{\Sigma_i}^{1/2}}) }$
+
+Note that the second term inside the square root is the Bures-Wasserstein
+squared distance between the covariance matrices $\Sigma_i$ and $\Sigma_j$.
+
+Like for smSQFA, there are requirements for a custom distance function
+to be compatible with SQFA:
+1. The distance function should be implemented in PyTorch.
+2. The distance function should take as input two
+   dictionaries with keys `means` and `covariances`. Each key
+   should have a tensor as value. The tensor for `means` should
+   have shape `(batch_A, n_dim)` and the tensor for `covariances`
+   should have shape `(batch_A, n_dim, n_dim)` (or `batch_B`)
+   for the second input). The function should return a tensor of pairwise
+   distances with shape `(batch_A, batch_B)`.
+    
+We implement the new distance making use of our implementation
+of the Bures-Wasserstein distance:
+
+```{code-cell} ipython
+# IMPLEMENT WASSERSTEIN DISTANCE IN M_N
+def wasserstein_distance(statistics_A, statistics_B):
+    """Compute the Wasserstein distance between all pairs
+    of distributions in (mu, Sigma) and (mu2, Sigma2)."""
+
+    mean_A = statistics_A['means']
+    mean_B = statistics_B['means']
+    dist_means_sq = torch.sum((mean_A[:, None] - mean_B[None, :]) ** 2, dim=-1)
+
+    dist_covariances_sq = bw_distance_sq(
+        A=statistics_A['covariances'], B=statistics_B['covariances']
+    )
+    
+    distance = torch.sqrt(torch.abs(dist_means_sq + dist_covariances_sq) + 1e-6) 
+
+    return distance
+```
+
+
+### Toy problem to compare distances in $\mathcal{M}_{\mathcal{N}}$
+
+To compare the distances in $\mathcal{M}_{\mathcal{N}}$ we will
+generate a toy problem similar to the one used in the previous section.
+The problem will have 4 dimensional data and 3 classes.
+Again, there will be two 2D subspaces, but unlike the
+previous example, these two subspaces are identical, and
+the difference between the distances will be seen within
+the subspaces.
+
+In each 2D subspace, the covariance ellipses have an
+enlongated shape, with a high-variance direction and a low-variance
+direction. In each subspace, the means of the classes are
+different. The differences between the means are smaller
+in the direction of low-variance, and larger in the direction of
+high-variance. However, the larger differences in the
+means are not enough to compensate for the much larger
+variance in the high-variance direction.
+
+The intuition is that the Fisher-Rao distance will prefer the
+directions with smaller variance, which despite having
+smaller differences in the means, are more discriminative.
+The earth mover's intuition again
+tells us that the Wasserstein distance will prefer the
+high-variance directions, which are less discriminative.
+
+Let's generate the data and visualize it.
+
+```{code-cell} ipython3
+# GENERATE THE COVARIANCE MATRICES
+rotation_angles = [
+  [45, 47, 43], # Dimensions 1, 2
+  [45, 47, 43],  # Dimensions 3, 4
+]
+
+# Generate the baseline covariance to be rotated
+n_angles = len(rotation_angles[0])
+variances = torch.tensor([0.6, 0.002, 0.6, 0.002])
+base_cov = torch.diag(variances) # Initial covariance to be rotated
+base_cov = base_cov.repeat(n_angles, 1, 1)
+
+# Generate the rotated covariance matrices for each class
+class_covariances = base_cov
+for d in range(len(rotation_angles)):
+    ang = torch.tensor(rotation_angles[d])
+    class_covariances = make_rotated_classes(
+      class_covariances, ang, dims=[2*d, 2*d+1]
+    )
+
+# GENERATE THE MEAN VECTORS
+small = 0.2
+large = 0.9
+class_means = torch.as_tensor([
+    [large, large, large, large],
+    [-small - large, small - large, -small - large, small - large],
+    [small, -small, small, -small],
+])
+
+# VISUALIZE THE COVARIANCE MATRICES
+figsize = (8, 4)
+lims = (-2.2, 2.2)
+fig, ax = plt.subplots(1, n_dim_pairs, figsize=figsize, sharex=True, sharey=True)
+plot_data_covariances(ax, class_covariances, means=class_means, lims=lims)
+plt.tight_layout()
+plt.show()
+```
+
+Let's test that the inputs and outputs of our custom Wasserstein distance
+function are as required.
+
+```{code-cell} ipython3
+# COMPUTE WASSERSTEIN DISTANCES
+data_statistics = {
+  "means": class_means,
+  "covariances": class_covariances,
+}
+
+wasserstein_dist = wasserstein_distance(
+  statistics_A=data_statistics, statistics_B=data_statistics
+)
+
+print(wasserstein_dist)
+```
+
+We see that the output has shape `(3, 3)`, which is what we expected.
+Now, let's learn 2 filters with SQFA using both the
+Fisher-Rao (lower-bound) distance and the Wasserstein distance.
+For this, we again use the parameter `distance_fun` when creating
+the `sqfa.model.SQFA` object.
+
+```{code-cell} ipython
+# LEARN FILTERS WITH FISHER-RAO DISTANCE
+noise = 0.001
+sqfa_fr = sqfa.model.SQFA(
+  n_dim=n_dim,
+  n_filters=2,
+  feature_noise=noise,
+  distance_fun=sqfa.distances.fisher_rao_lower_bound,
+)
+sqfa_fr.fit(data_statistics=data_statistics, show_progress=False)
+fr_filters = sqfa_fr.filters.detach()
+
+# LEARN FILTERS WITH WASSERSTEIN DISTANCE
+sqfa_w = sqfa.model.SQFA(
+  n_dim=n_dim,
+  n_filters=2,
+  feature_noise=noise,
+  distance_fun=wasserstein_distance,
+)
+sqfa_w.fit(data_statistics=data_statistics, show_progress=False)
+w_filters = sqfa_w.filters.detach()
+```
+
+Let's visualize the filters as arrows pointing in the data space:
+
+```{code-cell} ipython
+# Initialize plot and plot statistics
+figsize = (8, 3)
+fig, ax = plt.subplots(1, 2, figsize=figsize, sharex=True, sharey=True)
+plot_data_covariances(ax, class_covariances, class_means, lims=lims)
+
+# PLOT THE FILTERS
+plot_filters(ax, fr_filters, 'k', 'FR')
+plot_filters(ax, w_filters, 'r',  'Wass')
+
+# Add legend
+fr_patch = mpatches.Patch(color='k', label='FR')
+w_patch = mpatches.Patch(color='r', label='Wass')
+fig.legend(handles=[fr_patch, w_patch], loc='center right')
+plt.show()
+```
+
+It might seem that there are 4 filters in the plot, but that is not the
+case. Note that each filter is a 4-dimensional vector, so a single
+filter might can require an arrow in each 2D subspace to be
+visualized.
+
+We see that, in each 2D subspace, the filters learned with the
+Fisher-Rao distance point in the direction of highest discriminability,
+while the filters learned with the Wasserstein distance point in the
+direction of highest variance. Thus, again the Fisher-Rao
+distance is more successful in selecting the most discriminative
+features.
+
+Let's plot the output of the filters like we did in the
+[Feature selection](https://sqfa.readthedocs.io/en/latest/tutorials/toy_problem.html)
+tutorial:
+
+```{code-cell} ipython
+# GET THE FEATURE STATISTICS
+
+fr_covariances = sqfa_fr.transform_scatters(
+  data_statistics["covariances"]
+).detach()
+fr_means = sqfa_fr.transform(
+  data_statistics["means"]
+).detach()
+
+w_covariances = sqfa_w.transform_scatters(
+  data_statistics["covariances"]
+).detach()
+w_means = sqfa_w.transform(
+  data_statistics["means"]
+).detach()
+
+feature_covs = [fr_covariances, w_covariances]
+feature_means = [fr_means, w_means]
+model_names = ['Fisher-Rao', 'Wasserstein']
+
+# PLOT FEATURE STATISTICS
+for i in range(len(model_names)):
+    fig, ax = plt.subplots(1, 1, figsize=(2.5, 2.5))
+    covs = feature_covs[i]
+    means = feature_means[i]
+    sqfa.plot.statistics_ellipses(ellipses=covs, centers=means, ax=ax)
+    ax.set_title(f'{model_names[i]} feature-space')
+    ax.set_xlabel(f'{model_names[i]} feature 1')
+    ax.set_ylabel(f'{model_names[i]} feature 2')
+    plt.show()
+```
+
+We see that the classes are well separated in the feature space
+of the Fisher-Rao filters, while the classes are not well separated
+in the feature space of the Wasserstein filters. What's more, although
+not visible in the plot with arrows, it turns out that both
+Wasserstein filters are parallel to each other. Let's print the
+values of the filters to see this:
+
+```{code-cell} ipython
+print('Fisher-Rao filters:')
+print(fr_filters)
+print('Wasserstein filters:')
+print(w_filters)
+```
+
+Thus, the Wasserstein distance is not only less discriminative
+than the Fisher-Rao distance, but it also learns degenerate filters
+in this example.
+
+## Conclusion
+
+In this tutorial we have shown how to use custom distances
+in SQFA. We have also seen that the choice of distance
+function is crucial in the success of the feature learning process.
+In particular, we showed that the Fisher-Rao distance is more
+successful at learning discriminative features than the
+Wasserstein distance, which is also a popular choice in machine learning.
 
