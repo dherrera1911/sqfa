@@ -27,7 +27,7 @@ of linear features that are useful for classification.
 
 More specifically, given a dataset $\{\mathbf{x}_t, y_t\}_{t=1}^N$
 where $\mathbf{x}_t \in \mathbb{R}^n$ are the data vectors,
-$y_t \in \{1, \ldots, c}$ are the class labels,
+$y_t \in \{1, \ldots, c\}$ are the class labels,
 the goal of supervised linear dimensionality reduction in
 general is to learn a set of linear filters
 $\mathbf{F} \in \mathbb{R}^{n \times m}$, $m<n$ such that
@@ -55,7 +55,7 @@ characterizes SQFA and smSQFA, however, is that they take
 into account the class-specific second-order statistics to make
 the classes discriminable. Specifically, SQFA uses both
 the class-conditional means $\mu_i$ and the class-conditional
-covariance matrices $\Sima_i$ of the features,
+covariance matrices $\Sigma_i$ of the features,
 and smSQFA uses only the class-conditional
 second-moment matrices $\Psi_i = \mathbb{E}[\mathbf{z}\mathbf{z}^T | y=i]$.
 Then, SQFA and smSQFA learn the
