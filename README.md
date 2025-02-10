@@ -98,7 +98,7 @@ repository. To install the package and the dependencies
 needed to run the tutorials, use the following command:
 
 ```bash
-pip install sqfa[dev]
+pip install "sqfa[dev]"
 ```
 
 To install the lighter version without the tutorials dependencies, use
@@ -116,7 +116,7 @@ in editable mode with the following commands:
 ```bash
 git clone https://github.com/dherrera1911/sqfa.git
 cd sqfa
-pip install -e .[dev]
+pip install -e ".[dev]"
 ```
 
 ## Citation
