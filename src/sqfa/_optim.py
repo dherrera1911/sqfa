@@ -25,9 +25,9 @@ def check_distances_valid(distances):
     n_classes = distances.shape[0]
     tril_ind = torch.tril_indices(n_classes, n_classes, offset=-1)
     if torch.isnan(distances[tril_ind]).any():
-        raise ValueError("Some distances between classes are NaN.")
+        raise ValueError("Some distances between classes are NaN. Try using float64 or a different regularization parameter.")
     if torch.isinf(distances[tril_ind]).any():
-        raise ValueError("Some distances between classes are inf.")
+        raise ValueError("Some distances between classes are inf. Try using float64 or a different regularization parameter.")
 
 
 def fitting_loop(
