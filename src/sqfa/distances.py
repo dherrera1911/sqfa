@@ -13,6 +13,8 @@ __all__ = [
     "log_euclidean_sq",
     "log_euclidean",
     "fisher_rao_lower_bound",
+    "fisher_rao_lower_bound_sq",
+    "bhattacharyya",
 ]
 
 
@@ -23,6 +25,24 @@ def __dir__():
 EPSILON = 1e-6  # Value added inside of square roots
 
 
+def _unsqueeze_mean(A):
+    """
+    Add batch dimension to the mean if it is not present.
+    """
+    if A.dim() == 1:
+        A = A.unsqueeze(0)
+    return A
+
+
+def _unsqueeze_covariance(A):
+    """
+    Add batch dimension to the covariance if it is not present.
+    """
+    if A.dim() == 2:
+        A = A.unsqueeze(0)
+    return A
+
+
 def affine_invariant_sq(A, B):
     """
     Compute the squared affine invariant distance between SPD matrices.
@@ -31,6 +51,7 @@ def affine_invariant_sq(A, B):
     ----------
     A : torch.Tensor
         Shape (n_batch_A, n_dim, n_dim), the first SPD matrix.
+
     B : torch.Tensor
         Shape (n_batch_B, n_dim, n_dim), the second SPD matrix.
 
@@ -56,6 +77,7 @@ def affine_invariant(A, B):
     ----------
     A : torch.Tensor
         Shape (n_batch_A, n_dim, n_dim), the first SPD matrix.
+
     B : torch.Tensor
         Shape (n_batch_B, n_dim, n_dim), the second SPD matrix.
 
@@ -75,6 +97,7 @@ def log_euclidean_sq(A, B):
     ----------
     A : torch.Tensor
         Shape (n_batch_A, n_dim, n_dim), the first SPD matrix.
+
     B : torch.Tensor
         Shape (n_batch_B, n_dim, n_dim), the second SPD matrix.
 
@@ -83,8 +106,7 @@ def log_euclidean_sq(A, B):
     distance_squared : torch.Tensor
         Shape (n_batch_A, n_batch_B), the squared log-Euclidean distance.
     """
-    if A.dim() == 2:
-        A = A.unsqueeze(0)
+    A = _unsqueeze_covariance(A)
     # Compute the log of the matrices
     log_A = spd_log(A)
     log_B = spd_log(B)
@@ -104,6 +126,7 @@ def log_euclidean(A, B):
     ----------
     A : torch.Tensor
         Shape (n_batch_A, n_dim, n_dim), the first SPD matrix.
+
     B : torch.Tensor
         Shape (n_batch_B, n_dim, n_dim), the second SPD matrix.
 
@@ -136,8 +159,8 @@ def _embed_gaussian(statistics):
     embedding : torch.Tensor
         Shape (n_classes, n_filters+1, n_filters+1), the embedded SPD matrices.
     """
-    means = statistics["means"]
-    covariances = statistics["covariances"]
+    means = _unsqueeze_mean(statistics["means"])
+    covariances = _unsqueeze_covariance(statistics["covariances"])
 
     n_classes, n_filters = means.shape
 
@@ -164,6 +187,7 @@ def fisher_rao_lower_bound_sq(statistics_A, statistics_B):
         - The means are a torch.Tensor of shape (n_classes, n_filters)
         - The covariances are a torch.Tensor of
           shape (n_classes, n_filters, n_filters).
+
     statistics_B: dict
         Dictionary containing the means and covariances of the second
         Gaussian distribution, with keys "means" and "covariances".
@@ -196,6 +220,7 @@ def fisher_rao_lower_bound(statistics_A, statistics_B):
         - The means are a torch.Tensor of shape (n_classes, n_filters)
         - The covariances are a torch.Tensor of
           shape (n_classes, n_filters, n_filters).
+
     statistics_B: dict
         Dictionary containing the means and covariances of the second
         Gaussian distribution, with keys "means" and "covariances".
@@ -212,3 +237,49 @@ def fisher_rao_lower_bound(statistics_A, statistics_B):
       statistics_A, statistics_B
     )
     return torch.sqrt(distances_squared + EPSILON)
+
+
+def bhattacharyya(statistics_A, statistics_B):
+    """
+    Compute the Bhattacharyya distance between two Gaussian distributions.
+
+    Parameters
+    ----------
+    statistics_A: dict
+        Dictionary containing the means and covariances of the first
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    statistics_B: dict
+        Dictionary containing the means and covariances of the second
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    Returns
+    -------
+    distance : torch.Tensor
+        Shape (n_classes, n_classes), the lower bound of the Fisher-Rao distance.
+    """
+    mean_A = _unsqueeze_mean(statistics_A['means'])
+    cov_A = _unsqueeze_covariance(statistics_A['covariances'])
+    mean_B = _unsqueeze_mean(statistics_B['means'])
+    cov_B = _unsqueeze_covariance(statistics_B['covariances'])
+
+    mean_cov_inv = torch.linalg.inv((cov_A[:,None] + cov_B[None,:])/2)
+    means_diff = (mean_A[:,None] - mean_B[None,:])
+    term1 = torch.einsum(
+      'ijk,ijkl,ijl->ij', means_diff, mean_cov_inv, means_diff
+    )
+
+    mean_cov = (cov_A[:,None] + cov_B[None,:]) * 0.5
+    cov_det_A = torch.logdet(cov_A)
+    cov_det_B = torch.logdet(cov_B)
+    term2 = torch.logdet(mean_cov) - (cov_det_A[:,None] + cov_det_B[None,:]) * 0.5
+
+    dist = term1 * 1/8 + term2 * 0.5
+    return torch.squeeze(dist)
+
