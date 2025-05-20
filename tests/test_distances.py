@@ -8,6 +8,7 @@ from sqfa.distances import (
     affine_invariant_sq,
     fisher_rao_lower_bound_sq,
     log_euclidean_sq,
+    bhattacharyya,
 )
 
 torch.set_default_dtype(torch.float64)
@@ -119,4 +120,31 @@ def test_fisher_rao_sq(sample_spd_matrices, sample_vectors, n_classes, n_dim):
 
     assert torch.allclose(
         get_diag(fr_distances), torch.zeros(n_classes), atol=1e-5
+    ), "The diagonal of the self-distance matrix for AIRM is not zero"
+
+
+@pytest.mark.parametrize("n_classes", [1, 4, 8])
+@pytest.mark.parametrize("n_dim", [2, 4, 6])
+def test_bhattacharyya(sample_spd_matrices, sample_vectors, n_classes, n_dim):
+    """Test the generalized eigenvalues function."""
+    spd_mat = sample_spd_matrices
+    means = sample_vectors
+    stats_dict = {
+        "means": means,
+        "covariances": spd_mat,
+    }
+
+    bh_distances = bhattacharyya(stats_dict, stats_dict)
+
+    if n_classes != 1:
+        assert bh_distances.shape == (n_classes, n_classes)
+    else:
+        assert bh_distances.shape == ()
+
+    assert torch.allclose(
+        bh_distances, bh_distances.T, atol=1e-5
+    ), "The self-distance matrix for AIRM is not symmetric"
+
+    assert torch.allclose(
+        get_diag(bh_distances), torch.zeros(n_classes), atol=1e-5
     ), "The diagonal of the self-distance matrix for AIRM is not zero"
