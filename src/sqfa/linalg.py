@@ -73,7 +73,7 @@ def generalized_eigenvalues(A, B):
 def generalized_eigenvectors(A, B):
     """
     Compute the generalized eigenvectors of the pair of symmetric positive
-    definite matrices (A, B).
+    definite matrices (A, B) (i.e. B^-1 A).
 
     Parameters
     ----------
