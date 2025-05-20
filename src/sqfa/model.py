@@ -69,6 +69,7 @@ def _check_statistics(data_statistics):
     ------
     ValueError
         If `data_statistics` is a dictionary but does not contain the required keys.
+
     TypeError
         If `data_statistics` is neither a dictionary nor a tensor-like object.
     """
@@ -111,15 +112,19 @@ class SecondMomentsSQFA(nn.Module):
         ----------
         n_dim : int
             Dimension of the input data space.
+
         feature_noise : float
             Noise added to the features outputs, i.e. a diagonal term added
             to the covariance matrix of the features. Default is 0.
+
         n_filters : int
             Number of filters to use. Default is 2. If filters is provided,
             n_filters is ignored.
+
         filters : torch.Tensor
             Filters to use. If n_filters is provided, filters are randomly
             initialized. Default is None. Of shape (n_filters, n_dim).
+
         distance_fun : callable
             Function to compute the distance between the transformed feature
             scatter matrices. Should take as input two tensors of shape
@@ -127,6 +132,7 @@ class SecondMomentsSQFA(nn.Module):
             of shape (n_classes, n_classes) with the pairwise distances
             (or squared distances or similarities).
             If None, then the Affine Invariant squared distance is used.
+
         constraint : str
             Constraint to apply to the filters. Can be 'none', 'sphere' or
             'orthogonal'. Default is 'sphere'.
@@ -182,6 +188,7 @@ class SecondMomentsSQFA(nn.Module):
             - If a torch.Tensor, should have shape (n_classes, n_dim, n_dim) and contain
               the scatter matrices (second moments) of the data for each class.
             - If a dict, it should contain fields 'means' and 'covariances'.
+
         regularized : bool
             If True, regularize the distances by adding a small value to the
             diagonal of the transformed scatter matrices. Default is False.
@@ -228,6 +235,7 @@ class SecondMomentsSQFA(nn.Module):
         ----------
         X : torch.Tensor
             Input data of shape (n_samples, n_dim).
+
         data_statistics : torch.Tensor
             Tensor of shape (n_classes, n_dim, n_dim) with the second moments
             of the data for each class. If None, then X and y must be provided.
@@ -264,6 +272,7 @@ class SecondMomentsSQFA(nn.Module):
         pairwise=False,
         show_progress=True,
         return_loss=False,
+        atol=1e-6,
         **kwargs,
     ):
         """
@@ -274,29 +283,41 @@ class SecondMomentsSQFA(nn.Module):
         X : torch.Tensor
             Input data of shape (n_samples, n_dim). If data_statistics is None,
             then X and y must be provided.
+
         y : torch.Tensor
             Labels of shape (n_samples,). If data_statistics is None, then X
             and y must be provided. Labels must be integers starting from 0.
+
         data_statistics : torch.Tensor or dict
             - If a torch.Tensor, should have shape (n_classes, n_dim, n_dim) and contain
               the scatter matrices (second moments) of the data for each class.
             - If a dict, it should contain fields 'means' and 'covariances'
+
         max_epochs : int, optional
             Number of max training epochs. By default 50.
+
         lr : float
             Learning rate for the optimizer. Default is 0.1.
+
         estimator:
             Covariance estimator to use. Options are "empirical",
             and "oas". Default is "empirical".
+
         pairwise : bool
             If True, then filters are optimized pairwise (the first 2 filters
             are optimized together, then held fixed and the next 2 filters are
             optimized together, etc.). If False, all filters are optimized
             together. Default is False.
+
         show_progress : bool
             If True, show a progress bar during training. Default is True.
+
         return_loss : bool
             If True, return the loss after training. Default is False.
+
+        atol : float
+            Absolute tolerance for convergence. Default is 1e-6.
+
         **kwargs
             Additional keyword arguments passed to the NAdam optimizer.
         """
@@ -313,6 +334,7 @@ class SecondMomentsSQFA(nn.Module):
                 lr=lr,
                 show_progress=show_progress,
                 return_loss=True,
+                atol=atol,
                 **kwargs,
             )
 
@@ -366,6 +388,7 @@ class SecondMomentsSQFA(nn.Module):
                     lr=lr,
                     show_progress=show_progress,
                     return_loss=True,
+                    atol=atol,
                     **kwargs,
                 )
 
@@ -423,15 +446,28 @@ class SQFA(SecondMomentsSQFA):
         ----------
         n_dim : int
             Dimension of the input data space.
+
         feature_noise : float
             Noise added to the features outputs, i.e. a diagonal term added
             to the covariance matrix of the features. Default is 0.
+
         n_filters : int
             Number of filters to use. Default is 2. If filters is provided,
             n_filters is ignored.
+
         filters : torch.Tensor
             Filters to use. If n_filters is provided, filters are randomly
             initialized. Default is None. Of shape (n_filters, n_dim).
+
+        distance_fun : callable
+            Function to compute the distance between the class statistics.
+            Should take as input two dictionaries with fields
+            'means' and 'covariances' of shape (n_classes, n_dim) and
+            (n_classes, n_dim, n_dim) respectively, and return a pytorch tensor
+            of shape (n_classes, n_classes) with the pairwise distances
+            (or squared distances or similarities).
+            If None, then the Calvo-Oller lower bound is used.
+
         constraint : str
             Constraint to apply to the filters. Can be 'none', 'sphere' or
             'orthogonal'. Default is 'sphere'.
@@ -455,9 +491,11 @@ class SQFA(SecondMomentsSQFA):
         Parameters
         ----------
         data_statistics : torch.Tensor or dict
-            - If a torch.Tensor, should have shape (n_classes, n_dim, n_dim) and contain
-              the scatter matrices (second moments) of the data for each class.
+            - If a torch.Tensor, should have shape (n_classes, n_dim, n_dim)
+            and contain the scatter matrices (second moments) of the data
+            for each class.
             - If a dict, it should contain fields 'means' and 'covariances'.
+
         regularized : bool
             If True, regularize the distances by adding a small value to the
             diagonal of the transformed scatter matrices. Default is False.
@@ -509,27 +547,36 @@ class SQFA(SecondMomentsSQFA):
         X : torch.Tensor
             Input data of shape (n_samples, n_dim). If data_statistics is None,
             then X and y must be provided.
+
         y : torch.Tensor
             Labels of shape (n_samples,). If data_statistics is None, then X
             and y must be provided. Labels must be integers starting from 0.
+
         data_statistics : dict
             Dictionary containing the fields 'means' and 'covariances'
+
         max_epochs : int, optional
             Number of max training epochs. By default 50.
+
         lr : float
             Learning rate for the optimizer. Default is 0.1.
+
         estimator:
             Covariance estimator to use. Options are "empirical",
             and "oas". Default is "empirical".
+
         pairwise : bool
             If True, then filters are optimized pairwise (the first 2 filters
             are optimized together, then held fixed and the next 2 filters are
             optimized together, etc.). If False, all filters are optimized
             together. Default is False.
+
         show_progress : bool
             If True, show a progress bar during training. Default is True.
+
         return_loss : bool
             If True, return the loss after training. Default is False.
+
         **kwargs
             Additional keyword arguments passed to the NAdam optimizer.
         """
