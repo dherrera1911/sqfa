@@ -537,6 +537,7 @@ class SQFA(SecondMomentsSQFA):
         pairwise=False,
         show_progress=True,
         return_loss=False,
+        atol=1e-6,
         **kwargs,
     ):
         """
@@ -577,6 +578,9 @@ class SQFA(SecondMomentsSQFA):
         return_loss : bool
             If True, return the loss after training. Default is False.
 
+        atol : float
+            Absolute tolerance for convergence. Default is 1e-6.
+
         **kwargs
             Additional keyword arguments passed to the NAdam optimizer.
         """
@@ -601,6 +605,7 @@ class SQFA(SecondMomentsSQFA):
             pairwise=pairwise,
             show_progress=show_progress,
             return_loss=True,
+            atol=atol,
             **kwargs,
         )
 
