@@ -422,6 +422,21 @@ class SecondMomentsSQFA(nn.Module):
         elif constraint == "orthogonal":
             orthogonal(self, "filters")
 
+    def __dir__(self):
+        """
+        Return the list of attributes and methods of the model.
+        """
+        return super().__dir__() + [
+            "filters",
+            "diagonal_noise",
+            "distance_fun",
+            "constraint",
+            "transform_scatters",
+            "get_class_distances",
+            "transform",
+            "fit_pca",
+        ]
+
 
 class SQFA(SecondMomentsSQFA):
     """
