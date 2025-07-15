@@ -1,7 +1,7 @@
 # Quickstart
 
 <p align="center">
-  <img src="_static/sqfa.svg" width="350" height="120">
+  <img src="_static/sqfa.svg" width="450" height="120">
 </p>
 
 ```{include} ../../README.md
