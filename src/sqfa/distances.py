@@ -15,6 +15,8 @@ __all__ = [
     "fisher_rao_lower_bound",
     "fisher_rao_lower_bound_sq",
     "bhattacharyya",
+    "mahalanobis_sq",
+    "mahalanobis",
 ]
 
 
@@ -283,3 +285,77 @@ def bhattacharyya(statistics_A, statistics_B):
     dist = term1 * 1/8 + term2 * 0.5
     return torch.squeeze(dist)
 
+
+def mahalanobis_sq(statistics_A, statistics_B):
+    """
+    Compute the squared Mahalanobis distance between Gaussian distributions,
+    using the mean covariance matrix for each pair.
+
+    Parameters
+    ----------
+    statistics_A: dict
+        Dictionary containing the means and covariances of the first
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    statistics_B: dict
+        Dictionary containing the means and covariances of the second
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    Returns
+    -------
+    distance_squared : torch.Tensor
+        Shape (n_classes, n_classes), the squared Mahalanobis distance.
+    """
+    mean_A = _unsqueeze_mean(statistics_A["means"])  # (n_classes, n_filters)
+    cov_A = _unsqueeze_covariance(statistics_A["covariances"])  # (n_classes, n_filters, n_filters)
+
+    mean_B = _unsqueeze_mean(statistics_B["means"])  # (n_classes, n_filters)
+    cov_B = _unsqueeze_covariance(statistics_B["covariances"])  # (n_classes, n_filters, n_filters)
+
+    mean_cov = (cov_A[:, None] + cov_B[None, :]) / 2  # (n_classes, n_classes, n_filters, n_filters)
+    mean_cov_inv = torch.linalg.inv(mean_cov)  # Invert mean covariance
+
+    means_diff = mean_A[:, None] - mean_B[None, :]  # (n_classes, n_classes, n_filters)
+
+    # Compute squared Mahalanobis distance
+    distance_squared = torch.einsum(
+        'ijk,ijkl,ijl->ij', means_diff, mean_cov_inv, means_diff
+    )
+
+    return distance_squared
+
+
+def mahalanobis(statistics_A, statistics_B):
+    """
+    Compute the Mahalanobis distance between Gaussian distributions,
+    using the mean covariance matrix for each pair.
+
+    Parameters
+    ----------
+    statistics_A: dict
+        Dictionary containing the means and covariances of the first
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    statistics_B: dict
+        Dictionary containing the means and covariances of the second
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    Returns
+    -------
+    distance : torch.Tensor
+        Shape (n_classes, n_classes), the Mahalanobis distance.
+    """
+    distances_squared = mahalanobis_sq(statistics_A, statistics_B)
+    return torch.sqrt(distances_squared + EPSILON)
