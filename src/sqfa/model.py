@@ -426,7 +426,7 @@ class SecondMomentsSQFA(nn.Module):
         """
         Return the list of attributes and methods of the model.
         """
-        return super().__dir__() + [
+        return [
             "filters",
             "diagonal_noise",
             "distance_fun",
