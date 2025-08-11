@@ -21,7 +21,7 @@ def single_ellipse(covariance, ax, center=None, color="black"):
         Axes to plot the ellipse.
     center : torch.Tensor, optional
         Center of the ellipse. Shape (2). The default is [0, 0].
-    color : str, optional
+    color : optional
         Color of the ellipse. The default is 'black'.
     """
     if center is None:
@@ -96,14 +96,30 @@ def statistics_ellipses(
     if classes_plot is None:
         classes_plot = np.arange(centers.shape[0])
 
-    values = np.arange(len(classes_plot)) if values is None else values.numpy()
+    if values is None:
+        values = np.arange(len(classes_plot))
+    else:
+        values = np.array(values)
 
-    if isinstance(color_map, str):
-        color_map = plt.get_cmap(color_map)
+    # Get color maps
+    if values.ndim == 1:
+        if isinstance(color_map, str):
+            color_map = plt.get_cmap(color_map)
+        class_colors = get_class_rgba(color_map, values)
+        col1_vals, col2_vals = values, None
+    elif values.ndim == 2 and values.shape[1] == 2:
+        col1_vals = values[:, 0]
+        col2_vals = values[:, 1]
+        class_colors = _rgba_from_two_dims(
+            col1_vals, col2_vals,
+            cmap=color_map,
+        )
+    else:
+        raise ValueError("`values` must be 1‑D or 2‑D with 2 columns.")
 
-    class_colors = get_class_rgba(color_map, values)
-
-    centers_subset, ellipses_subset = statistics_dim_subset(centers, ellipses, dim_pair)
+    centers_subset, ellipses_subset = statistics_dim_subset(
+      centers, ellipses, dim_pair
+    )
 
     for _, ind in enumerate(classes_plot):
         single_ellipse(
@@ -112,20 +128,66 @@ def statistics_ellipses(
             ax=ax,
             color=class_colors[ind],
         )
-    ax.autoscale_view()
 
+    ax.autoscale_view()
     ax.set_xlabel(f"Dimension {dim_pair[0] + 1}")
     ax.set_ylabel(f"Dimension {dim_pair[1] + 1}")
 
-    if legend_type == "continuous":
-        color_map, norm = get_normalized_color_map(color_map, values)
-        sm = plt.cm.ScalarMappable(cmap=color_map, norm=norm)
-        sm.set_array([])
-        plt.colorbar(sm, ax=ax, **kwargs)
-
-    elif legend_type == "discrete":
-        for _, ind in enumerate(classes_plot):
-            ax.scatter([], [], c=[class_colors[ind]], label=values[ind])
-        ax.legend(**kwargs)
+#    if legend_type == "continuous" and values.ndim == 1:
+#        color_map, norm = get_normalized_color_map(color_map, values)
+#        sm = plt.cm.ScalarMappable(cmap=color_map, norm=norm)
+#        sm.set_array([])
+#        plt.colorbar(sm, ax=ax, **kwargs)
+#
+#    elif legend_type == "two" and col2_vals is not None:
+#        # 1) orientation colourbar
+#        cmap, onorm = get_normalized_color_map(color_map, col1_vals)
+#        sm = plt.cm.ScalarMappable(cmap=cmap, norm=onorm)
+#        sm.set_array([])
+#        plt.colorbar(sm, ax=ax, label="Orientation", **kwargs)
+#
+#        # 2) frequency legend (alpha patches)
+#        uniq_f = np.unique(col2_vals)
+#        handles = []
+#        for f in uniq_f:
+#            alpha = alpha_range[0] + (
+#                (f - col2_vals.min()) / (col2_vals.ptp() + 1e-12)
+#            ) * (alpha_range[1] - alpha_range[0])
+#            patch = patches.Patch(
+#                facecolor=(0, 0, 0, 0), edgecolor=(0, 0, 0, alpha),
+#                linewidth=3, label=f"{f:g}"
+#            )
+#            handles.append(patch)
+#        ax.legend(handles=handles, title="Frequency")
+#
+#    elif legend_type == "discrete":
+#        for _, ind in enumerate(classes_plot):
+#            ax.scatter([], [], c=[class_colors[ind]], label=values[ind])
+#        ax.legend(**kwargs)
 
     return ax
+
+
+def _rgba_from_two_dims(dim1_vals, dim2_vals,
+                        cmap='hsv', alpha_range=(0.3, 1.0)):
+    """
+    Map `orient` to RGB using `cmap` and `freq` to alpha.
+
+    orient, freq : 1‑D numpy arrays of equal length
+    returns      : (N, 4) float32 RGBA array
+    """
+    cmap = plt.get_cmap(cmap)
+    # normalise each variable independently
+    d1_norm = (dim1_vals - dim1_vals.min()) / (dim1_vals.max() - dim1_vals.min())
+    d2_norm = (dim2_vals - dim2_vals.min()) / (dim2_vals.max() - dim2_vals.min())
+
+    rgba = cmap(d1_norm)
+    a_min, a_max = alpha_range
+    rgba[:, 3] = a_min + d2_norm * (a_max - a_min)  # Set alpha by dim 2
+
+    # use lightness instead of alpha
+    # rgb = colors.rgb_to_hsv(rgba[:, :3])
+    # rgb[:, 2] = a_min + d2_norm * (a_max - a_min)  # value channel
+    # rgba[:, :3] = colors.hsv_to_rgb(rgb)
+
+    return rgba.astype(np.float32)

@@ -9,6 +9,7 @@ from sqfa.distances import (
     fisher_rao_lower_bound_sq,
     log_euclidean_sq,
     bhattacharyya,
+    mahalanobis,
 )
 
 torch.set_default_dtype(torch.float64)
@@ -74,11 +75,11 @@ def test_distance_sq(sample_spd_matrices, n_classes, n_dim):
 
     assert torch.allclose(
         le_distances_sq, le_distances_sq.T, atol=1e-5
-    ), "The self-distance matrix for AIRM is not symmetric"
+    ), "The self-distance matrix for Log-Euclidean is not symmetric"
 
     assert torch.allclose(
         get_diag(le_distances_sq), torch.zeros(n_classes), atol=1e-5
-    ), "The diagonal of the self-distance matrix for AIRM is not zero"
+    ), "The diagonal of the Log-Euclidean distance matrix is not zero"
 
     le_distances_inv_sq = log_euclidean_sq(spd_inv, spd_inv)
 
@@ -116,11 +117,11 @@ def test_fisher_rao_sq(sample_spd_matrices, sample_vectors, n_classes, n_dim):
 
     assert torch.allclose(
         fr_distances, fr_distances.T, atol=1e-5
-    ), "The self-distance matrix for AIRM is not symmetric"
+    ), "The self-distance matrix for Calvo-Oller is not symmetric"
 
     assert torch.allclose(
         get_diag(fr_distances), torch.zeros(n_classes), atol=1e-5
-    ), "The diagonal of the self-distance matrix for AIRM is not zero"
+    ), "The diagonal of the self-distance matrix for Calvo-Oller is not zero"
 
 
 @pytest.mark.parametrize("n_classes", [1, 4, 8])
@@ -143,8 +144,43 @@ def test_bhattacharyya(sample_spd_matrices, sample_vectors, n_classes, n_dim):
 
     assert torch.allclose(
         bh_distances, bh_distances.T, atol=1e-5
-    ), "The self-distance matrix for AIRM is not symmetric"
+    ), "The self-distance matrix for Bhattacharyya is not symmetric"
 
     assert torch.allclose(
         get_diag(bh_distances), torch.zeros(n_classes), atol=1e-5
-    ), "The diagonal of the self-distance matrix for AIRM is not zero"
+    ), "The diagonal of the self-distance matrix for Bhattacharyya is not zero"
+
+
+@pytest.mark.parametrize("n_classes", [1, 4, 8])
+@pytest.mark.parametrize("n_dim", [2, 4, 6])
+def test_mahalanobis(sample_spd_matrices, sample_vectors, n_classes, n_dim):
+    """Test the generalized eigenvalues function."""
+    spd_mat = torch.eye(n_dim).repeat(n_classes, 1, 1) * 2.0
+    means = sample_vectors
+    stats_dict = {
+        "means": means,
+        "covariances": spd_mat,
+    }
+
+    # Compute the Mahalanobis distances and subtract numerical epsilon
+    maha_distances = mahalanobis(stats_dict, stats_dict)
+    maha_distances = maha_distances - torch.eye(n_classes) * 1e-3
+
+    assert torch.allclose(
+        maha_distances, maha_distances.T, atol=1e-5
+    ), "The self-distance matrix for Mahalanobis is not symmetric"
+
+    assert torch.allclose(
+        maha_distances.diag(), torch.zeros(n_classes)
+    ), "The diagonal of the self-distance matrix for Mahalanobis is not zero"
+
+    # Compare to expected euclidean distance 
+    euclidean = torch.cdist(
+        stats_dict["means"], stats_dict["means"], p=2.0
+    ) / torch.sqrt(torch.tensor(2.0))
+
+    assert torch.allclose(
+        maha_distances, euclidean, atol=1e-5
+    ), "Mahalanobis doesn't match expected Euclidean distance"
+
+

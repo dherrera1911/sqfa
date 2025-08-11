@@ -85,7 +85,7 @@ unreleased_scheme = "dev"
 
 
 [tool.pytest.ini_options]
-addopts = "--cov=sqfa --cov-report term-missing -n auto"
+addopts = "--cov=sqfa --cov-report term-missing -n 4"
 testpaths = ["tests"]
 
 

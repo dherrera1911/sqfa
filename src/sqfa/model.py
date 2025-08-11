@@ -53,7 +53,7 @@ def _stats_to_scatter(statistics):
     return scatter
 
 
-def _check_statistics(data_statistics):
+def _check_statistics(data_statistics, needs_dict=False):
     """
     Check that data_statistics is either:
       1) a torch.Tensor of shape (n_classes, n_dim, n_dim), or
@@ -86,6 +86,11 @@ def _check_statistics(data_statistics):
         raise TypeError(
             "`data_statistics` must be either a dict with 'means' and 'covariances' "
             "or a torch.Tensor of shape (n_classes, n_dim, n_dim)."
+        )
+    elif needs_dict:
+        raise TypeError(
+            "`data_statistics` must be a dictionary with 'means' and 'covariances' "
+            "when `needs_dict` is True."
         )
 
 
@@ -145,6 +150,11 @@ class SecondMomentsSQFA(nn.Module):
             filters = torch.as_tensor(filters, dtype=torch.float32)
 
         self.filters = nn.Parameter(filters)
+
+        if self.filters.shape[0] > self.filters.shape[1]:
+            raise ValueError(
+                "Number of filters must be less than or equal to the data dimension."
+            )
 
         feature_noise_mat = torch.as_tensor(
             feature_noise, dtype=torch.float32
@@ -243,10 +253,6 @@ class SecondMomentsSQFA(nn.Module):
         """
         if X is None and data_statistics is None:
             raise ValueError("Either X or data_statistics must be provided.")
-        if self.filters.shape[0] > self.filters.shape[1]:
-            raise ValueError(
-                "Number of filters must be less than or equal to the data dimension."
-            )
 
         n_components = self.filters.shape[0]
 
@@ -325,6 +331,8 @@ class SecondMomentsSQFA(nn.Module):
             if X is None or y is None:
                 raise ValueError("Either data_statistics or X and y must be provided.")
             data_statistics = class_statistics(X, y, estimator=estimator)
+
+        _check_statistics(data_statistics)
 
         if not pairwise:
             loss, training_time = fitting_loop(
@@ -521,7 +529,7 @@ class SQFA(SecondMomentsSQFA):
             Pairwise distances between the transformed feature scatter matrices.
         """
         if not isinstance(data_statistics, dict):
-            raise ValueError(
+            raise TypeError(
                 "data_statistics must be a dictionary with 'means' and 'covariances' keys."
             )
         # Compute feature statistics
@@ -604,11 +612,7 @@ class SQFA(SecondMomentsSQFA):
                 raise ValueError("Either data_statistics or X and y must be provided.")
             data_statistics = class_statistics(X, y, estimator=estimator)
         else:
-            if not isinstance(data_statistics, dict):
-                raise ValueError(
-                    "data_statistics must be a dictionary with 'means' and 'covariances' keys."
-                )
-            _check_statistics(data_statistics)
+            _check_statistics(data_statistics, needs_dict=True)
 
         loss, training_time = super().fit(
             X=None,

@@ -99,4 +99,5 @@ def make_dataset_points(n_points, class_covariances):
             points = torch.cat((points, class_points), 0)
             labels = torch.cat((labels, torch.ones(n_points) * i), 0)
 
+    labels = labels.long()
     return points, labels
