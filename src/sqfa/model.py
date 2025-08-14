@@ -369,7 +369,7 @@ class SecondMomentsSQFA(nn.Module):
                 # iteration
                 filters_last_trained = self.filters.detach().clone()
                 if i == 0:
-                    filters_new_init = filters_original[:2]
+                    filters_new_init = filters_original[:2].contiguous()
                 else:
                     filters_new_init = torch.cat(
                         (filters_last_trained, filters_original[2 * i : 2 * (i + 1)])
