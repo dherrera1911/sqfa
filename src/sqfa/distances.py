@@ -18,6 +18,7 @@ __all__ = [
     "mahalanobis_sq",
     "mahalanobis",
     "hellinger",
+    "fisher_rao_same_cov",
 ]
 
 
