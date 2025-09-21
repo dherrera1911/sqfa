@@ -360,9 +360,11 @@ def mahalanobis(statistics_A, statistics_B):
     return torch.sqrt(distances_squared + EPSILON)
 
 
-def hellinger(A, B):
+def hellinger(statistics_A, statistics_BB):
     """
     Compute the Hellinger distance between two Gaussian distributions.
+    An epsilon is added inside the square root to avoid gradient
+    instabilities.
 
     Parameters
     ----------
@@ -385,6 +387,45 @@ def hellinger(A, B):
     distance : torch.Tensor
         Shape (n_classes, n_classes), the lower bound of the Fisher-Rao distance.
     """
-    dist = bhattacharyya(A, B)
-    hellinger = torch.sqrt(1 - torch.exp(-dist) + 1e-8)
+    dist = bhattacharyya(statistics_A, statistics_B)
+    hellinger = torch.sqrt(1 - torch.exp(-dist) + EPSILON)
     return hellinger
+
+
+def fisher_rao_same_cov(statistics_A, statistics_B):
+    """
+    Compute the exact Fisher-Rao distance between two Gaussian
+    distributions with the same covariance matrix. The covariance matrix is
+    taken as the mean of the two covariance matrices.
+
+    Parameters
+    ----------
+    statistics_A: dict
+        Dictionary containing the means and covariances of the first
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    statistics_B: dict
+        Dictionary containing the means and covariances of the second
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    Returns
+    -------
+    distance : torch.Tensor
+        Shape (n_classes, n_classes), the Fisher-Rao distance.
+
+    References
+    ----------
+    .. [1] F. Nielsen, "A Simple Approximation Method for the Fisher–Rao
+    Distance between Multivariate Normal Distributions"
+    Entropy, vol. 25, no. 4, pp. 654, 2023.
+    """
+    dist_maha_sq = mahalanobis_sq(statistics_A, statistics_B)
+    fr_dist = torch.sqrt(torch.tensor(2.0)) * \
+        torch.acosh(1 + dist_maha_sq / 4)
+    return fr_dist
