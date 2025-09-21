@@ -159,7 +159,7 @@ class SecondMomentsSQFA(nn.Module):
         feature_noise_mat = torch.as_tensor(
             feature_noise, dtype=torch.float32
         ) * torch.eye(n_filters)
-        self.register_buffer("diagonal_noise", feature_noise_mat)
+        self.register_buffer("noise_mat", feature_noise_mat)
 
         if distance_fun is None:
             self.distance_fun = affine_invariant
@@ -214,7 +214,7 @@ class SecondMomentsSQFA(nn.Module):
         feature_scatters = self.transform_scatters(data_scatters)
 
         if regularized:
-            feature_scatters = feature_scatters + self.diagonal_noise[None, :, :]
+            feature_scatters = feature_scatters + self.noise_mat[None, :, :]
 
         distances = self.distance_fun(feature_scatters, feature_scatters)
         return distances
@@ -351,7 +351,7 @@ class SecondMomentsSQFA(nn.Module):
 
             # Store initial filters
             filters_original = self.filters.detach().clone()
-            noise_original = self.diagonal_noise.detach().clone()[0, 0]
+            noise_original = self.noise_mat.detach().clone()[0, 0]
 
             # Require n_pairs to be even
             if self.filters.shape[0] % 2 != 0:
@@ -380,7 +380,7 @@ class SecondMomentsSQFA(nn.Module):
 
                 # Re-initialize noise, to be a tensor of shape (2*(i+1), 2*(i+1))
                 feature_noise_mat = noise_original * torch.eye(2 * (i + 1))
-                self.register_buffer("diagonal_noise", feature_noise_mat)
+                self.register_buffer("noise_mat", feature_noise_mat)
 
                 # Fix the filters already trained
                 if i > 0:
@@ -431,12 +431,10 @@ class SecondMomentsSQFA(nn.Module):
             orthogonal(self, "filters")
 
     def __dir__(self):
-        """
-        Return the list of attributes and methods of the model.
-        """
+        """Return the list of attributes and methods of the model."""
         return [
             "filters",
-            "diagonal_noise",
+            "noise_mat",
             "distance_fun",
             "constraint",
             "transform_scatters",
@@ -537,16 +535,14 @@ class SQFA(SecondMomentsSQFA):
         feature_covariances = self.transform_scatters(data_statistics["covariances"])
 
         if regularized:
-            feature_covariances = feature_covariances + self.diagonal_noise[None, :, :]
+            feature_covariances = feature_covariances + self.noise_mat[None, :, :]
 
         feature_statistics = {
-          "means": feature_means,
-          "covariances": feature_covariances,
+            "means": feature_means,
+            "covariances": feature_covariances,
         }
 
-        distances = self.distance_fun(
-          feature_statistics, feature_statistics
-        )
+        distances = self.distance_fun(feature_statistics, feature_statistics)
         return distances
 
     def fit(
