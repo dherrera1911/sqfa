@@ -6,7 +6,7 @@ import torch
 from matplotlib import patches
 
 from ._data_wrangle import statistics_dim_subset
-from .colors import get_class_rgba, get_normalized_color_map
+from .colors import get_class_rgba
 
 
 def single_ellipse(covariance, ax, center=None, color="black"):
@@ -96,10 +96,8 @@ def statistics_ellipses(
     if classes_plot is None:
         classes_plot = np.arange(centers.shape[0])
 
-    if values is None:
-        values = np.arange(len(classes_plot))
-    else:
-        values = np.array(values)
+
+    values = np.arange(len(classes_plot)) if values is None else np.array(values)
 
     # Get color maps
     if values.ndim == 1:

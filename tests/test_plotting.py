@@ -5,7 +5,7 @@ import pytest
 import torch
 
 import sqfa
-from make_examples import rotated_classes_dataset, make_dataset_points
+from make_examples import make_dataset_points, rotated_classes_dataset
 
 
 @pytest.fixture(scope="function")
@@ -78,6 +78,7 @@ def test_data_wrangle(make_dataset):
 
 
 def test_points_plotting(make_dataset):
+    """Test the data point plotting function."""
     class_covariances, class_means = make_dataset
 
     n_points = 10

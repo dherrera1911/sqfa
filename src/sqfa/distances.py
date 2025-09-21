@@ -361,7 +361,7 @@ def mahalanobis(statistics_A, statistics_B):
     return torch.sqrt(distances_squared + EPSILON)
 
 
-def hellinger(statistics_A, statistics_BB):
+def hellinger(statistics_A, statistics_B):
     """
     Compute the Hellinger distance between two Gaussian distributions.
     An epsilon is added inside the square root to avoid gradient

@@ -6,9 +6,9 @@ import torch
 from make_examples import sample_spd
 from sqfa.distances import (
     affine_invariant_sq,
+    bhattacharyya,
     fisher_rao_lower_bound_sq,
     log_euclidean_sq,
-    bhattacharyya,
     mahalanobis,
 )
 
