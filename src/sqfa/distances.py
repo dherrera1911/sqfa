@@ -17,6 +17,7 @@ __all__ = [
     "bhattacharyya",
     "mahalanobis_sq",
     "mahalanobis",
+    "hellinger",
 ]
 
 
@@ -28,18 +29,14 @@ EPSILON = 1e-6  # Value added inside of square roots
 
 
 def _unsqueeze_mean(A):
-    """
-    Add batch dimension to the mean if it is not present.
-    """
+    """Add batch dimension to the mean if it is not present."""
     if A.dim() == 1:
         A = A.unsqueeze(0)
     return A
 
 
 def _unsqueeze_covariance(A):
-    """
-    Add batch dimension to the covariance if it is not present.
-    """
+    """Add batch dimension to the covariance if it is not present."""
     if A.dim() == 2:
         A = A.unsqueeze(0)
     return A
@@ -235,9 +232,7 @@ def fisher_rao_lower_bound(statistics_A, statistics_B):
     distance : torch.Tensor
         Shape (n_classes, n_classes), the lower bound of the Fisher-Rao distance.
     """
-    distances_squared = fisher_rao_lower_bound_sq(
-      statistics_A, statistics_B
-    )
+    distances_squared = fisher_rao_lower_bound_sq(statistics_A, statistics_B)
     return torch.sqrt(distances_squared + EPSILON)
 
 
@@ -266,23 +261,21 @@ def bhattacharyya(statistics_A, statistics_B):
     distance : torch.Tensor
         Shape (n_classes, n_classes), the lower bound of the Fisher-Rao distance.
     """
-    mean_A = _unsqueeze_mean(statistics_A['means'])
-    cov_A = _unsqueeze_covariance(statistics_A['covariances'])
-    mean_B = _unsqueeze_mean(statistics_B['means'])
-    cov_B = _unsqueeze_covariance(statistics_B['covariances'])
+    mean_A = _unsqueeze_mean(statistics_A["means"])
+    cov_A = _unsqueeze_covariance(statistics_A["covariances"])
+    mean_B = _unsqueeze_mean(statistics_B["means"])
+    cov_B = _unsqueeze_covariance(statistics_B["covariances"])
 
-    mean_cov_inv = torch.linalg.inv((cov_A[:,None] + cov_B[None,:])/2)
-    means_diff = (mean_A[:,None] - mean_B[None,:])
-    term1 = torch.einsum(
-      'ijk,ijkl,ijl->ij', means_diff, mean_cov_inv, means_diff
-    )
+    mean_cov_inv = torch.linalg.inv((cov_A[:, None] + cov_B[None, :]) / 2)
+    means_diff = mean_A[:, None] - mean_B[None, :]
+    term1 = torch.einsum("ijk,ijkl,ijl->ij", means_diff, mean_cov_inv, means_diff)
 
-    mean_cov = (cov_A[:,None] + cov_B[None,:]) * 0.5
+    mean_cov = (cov_A[:, None] + cov_B[None, :]) * 0.5
     cov_det_A = torch.logdet(cov_A)
     cov_det_B = torch.logdet(cov_B)
-    term2 = torch.logdet(mean_cov) - (cov_det_A[:,None] + cov_det_B[None,:]) * 0.5
+    term2 = torch.logdet(mean_cov) - (cov_det_A[:, None] + cov_det_B[None, :]) * 0.5
 
-    dist = term1 * 1/8 + term2 * 0.5
+    dist = term1 * 1 / 8 + term2 * 0.5
     return torch.squeeze(dist)
 
 
@@ -313,19 +306,25 @@ def mahalanobis_sq(statistics_A, statistics_B):
         Shape (n_classes, n_classes), the squared Mahalanobis distance.
     """
     mean_A = _unsqueeze_mean(statistics_A["means"])  # (n_classes, n_filters)
-    cov_A = _unsqueeze_covariance(statistics_A["covariances"])  # (n_classes, n_filters, n_filters)
+    cov_A = _unsqueeze_covariance(
+        statistics_A["covariances"]
+    )  # (n_classes, n_filters, n_filters)
 
     mean_B = _unsqueeze_mean(statistics_B["means"])  # (n_classes, n_filters)
-    cov_B = _unsqueeze_covariance(statistics_B["covariances"])  # (n_classes, n_filters, n_filters)
+    cov_B = _unsqueeze_covariance(
+        statistics_B["covariances"]
+    )  # (n_classes, n_filters, n_filters)
 
-    mean_cov = (cov_A[:, None] + cov_B[None, :]) / 2  # (n_classes, n_classes, n_filters, n_filters)
+    mean_cov = (
+        cov_A[:, None] + cov_B[None, :]
+    ) / 2  # (n_classes, n_classes, n_filters, n_filters)
     mean_cov_inv = torch.linalg.inv(mean_cov)  # Invert mean covariance
 
     means_diff = mean_A[:, None] - mean_B[None, :]  # (n_classes, n_classes, n_filters)
 
     # Compute squared Mahalanobis distance
     distance_squared = torch.einsum(
-        'ijk,ijkl,ijl->ij', means_diff, mean_cov_inv, means_diff
+        "ijk,ijkl,ijl->ij", means_diff, mean_cov_inv, means_diff
     )
 
     return distance_squared
@@ -359,3 +358,33 @@ def mahalanobis(statistics_A, statistics_B):
     """
     distances_squared = mahalanobis_sq(statistics_A, statistics_B)
     return torch.sqrt(distances_squared + EPSILON)
+
+
+def hellinger(A, B):
+    """
+    Compute the Hellinger distance between two Gaussian distributions.
+
+    Parameters
+    ----------
+    statistics_A: dict
+        Dictionary containing the means and covariances of the first
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    statistics_B: dict
+        Dictionary containing the means and covariances of the second
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    Returns
+    -------
+    distance : torch.Tensor
+        Shape (n_classes, n_classes), the lower bound of the Fisher-Rao distance.
+    """
+    dist = bhattacharyya(A, B)
+    hellinger = torch.sqrt(1 - torch.exp(-dist) + 1e-8)
+    return hellinger
