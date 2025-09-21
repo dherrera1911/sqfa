@@ -202,7 +202,7 @@ def fisher_rao_lower_bound_sq(statistics_A, statistics_B):
     """
     embedding_A = _embed_gaussian(statistics_A)
     embedding_B = _embed_gaussian(statistics_B)
-    distance_squared = affine_invariant_sq(embedding_A, embedding_B)
+    distance_squared = affine_invariant_sq(embedding_A, embedding_B) / 2
     return distance_squared
 
 
