@@ -21,6 +21,7 @@ __all__ = [
     "mahalanobis",
     "wasserstein_sq",
     "wasserstein",
+    "jeffreys",
     "hellinger",
     "fisher_rao_same_cov",
 ]
@@ -463,6 +464,87 @@ def wasserstein(statistics_A, statistics_B):
     """
     distances_squared = wasserstein_sq(statistics_A, statistics_B)
     return torch.sqrt(torch.abs(distances_squared) + EPSILON)
+
+
+def _kl_divergence_gaussians(statistics_A, statistics_B):
+    """
+    Compute KL divergence between pairs of multivariate Gaussian
+    distributions, KL(A || B).
+
+    Parameters
+    ----------
+    statistics_A: dict
+        Dictionary containing the means and covariances of the first
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    statistics_B: dict
+        Dictionary containing the means and covariances of the second
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    Returns
+    -------
+    divergence : torch.Tensor
+        Shape (n_classes, n_classes), the pairwise KL divergences.
+    """
+    mean_A = _unsqueeze_mean(statistics_A["means"])
+    cov_A = _unsqueeze_covariance(statistics_A["covariances"])
+    mean_B = _unsqueeze_mean(statistics_B["means"])
+    cov_B = _unsqueeze_covariance(statistics_B["covariances"])
+
+    n_dim = mean_A.shape[-1]
+
+    cov_B_inv = torch.linalg.inv(cov_B)
+    trace_term = torch.einsum("aij,bji->ab", cov_A, cov_B_inv)
+
+    means_diff = mean_B[None, ...] - mean_A[:, None, ...]
+    quad_term = torch.einsum("abi,bij,abj->ab", means_diff, cov_B_inv, means_diff)
+
+    logdet_A = torch.logdet(cov_A)
+    logdet_B = torch.logdet(cov_B)
+    logdet_term = logdet_B[None, :] - logdet_A[:, None]
+
+    divergence = 0.5 * (trace_term + quad_term - n_dim + logdet_term)
+    return divergence
+
+
+def jeffreys(statistics_A, statistics_B):
+    """
+    Compute the Jeffreys divergence between Gaussian distributions.
+
+    Jeffreys divergence is the symmetric KL divergence:
+    KL(A || B) + KL(B || A).
+
+    Parameters
+    ----------
+    statistics_A: dict
+        Dictionary containing the means and covariances of the first
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    statistics_B: dict
+        Dictionary containing the means and covariances of the second
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    Returns
+    -------
+    divergence : torch.Tensor
+        Shape (n_classes, n_classes), the Jeffreys divergence.
+    """
+    kl_ab = _kl_divergence_gaussians(statistics_A, statistics_B)
+    kl_ba = _kl_divergence_gaussians(statistics_B, statistics_A)
+    divergence = kl_ab + kl_ba.T
+    return torch.squeeze(divergence)
 
 
 def hellinger(statistics_A, statistics_B):

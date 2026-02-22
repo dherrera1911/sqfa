@@ -8,6 +8,7 @@ from sqfa.distances import (
     affine_invariant_sq,
     bhattacharyya,
     fisher_rao_lower_bound_sq,
+    jeffreys,
     log_euclidean_sq,
     mahalanobis,
     wasserstein_sq,
@@ -225,3 +226,44 @@ def test_wasserstein_sq(sample_spd_matrices, sample_vectors, n_classes, n_dim):
         w_distances_sq, torch.squeeze(euclidean_sq), atol=1e-5
     ), "Wasserstein squared distance doesn't match expected Euclidean distance"
 
+
+@pytest.mark.parametrize("n_classes", [1, 4, 8])
+@pytest.mark.parametrize("n_dim", [2, 4, 6])
+def test_jeffreys(sample_spd_matrices, sample_vectors, n_classes, n_dim):
+    """Test the Jeffreys divergence for Gaussian statistics."""
+    spd_mat = sample_spd_matrices
+    means = sample_vectors
+
+    stats_dict = {
+        "means": means,
+        "covariances": spd_mat,
+    }
+
+    j_divergence = jeffreys(stats_dict, stats_dict)
+
+    if n_classes != 1:
+        assert j_divergence.shape == (n_classes, n_classes)
+    else:
+        assert j_divergence.shape == ()
+
+    assert torch.allclose(
+        j_divergence, j_divergence.T, atol=1e-5
+    ), "The self-divergence matrix for Jeffreys is not symmetric"
+
+    assert torch.allclose(
+        get_diag(j_divergence), torch.zeros(n_classes), atol=1e-5
+    ), "The diagonal of the self-divergence matrix for Jeffreys is not zero"
+
+    # When all covariances are identity, Jeffreys equals squared Euclidean
+    # distance between means.
+    shared_cov = torch.eye(n_dim).repeat(n_classes, 1, 1)
+    shared_cov_stats = {
+        "means": means,
+        "covariances": shared_cov,
+    }
+    j_divergence = jeffreys(shared_cov_stats, shared_cov_stats)
+    euclidean_sq = torch.cdist(means, means, p=2.0) ** 2
+
+    assert torch.allclose(
+        j_divergence, torch.squeeze(euclidean_sq), atol=1e-5
+    ), "Jeffreys divergence doesn't match expected squared Euclidean distance"
