@@ -10,6 +10,7 @@ from sqfa.distances import (
     fisher_rao_lower_bound_sq,
     log_euclidean_sq,
     mahalanobis,
+    wasserstein_sq,
 )
 
 torch.set_default_dtype(torch.float64)
@@ -183,4 +184,44 @@ def test_mahalanobis(sample_spd_matrices, sample_vectors, n_classes, n_dim):
         maha_distances, euclidean, atol=1e-5
     ), "Mahalanobis doesn't match expected Euclidean distance"
 
+
+@pytest.mark.parametrize("n_classes", [1, 4, 8])
+@pytest.mark.parametrize("n_dim", [2, 4, 6])
+def test_wasserstein_sq(sample_spd_matrices, sample_vectors, n_classes, n_dim):
+    """Test the squared Wasserstein distance for Gaussian statistics."""
+    spd_mat = sample_spd_matrices
+    means = sample_vectors
+
+    stats_dict = {
+        "means": means,
+        "covariances": spd_mat,
+    }
+
+    w_distances_sq = wasserstein_sq(stats_dict, stats_dict)
+
+    if n_classes != 1:
+        assert w_distances_sq.shape == (n_classes, n_classes)
+    else:
+        assert w_distances_sq.shape == ()
+
+    assert torch.allclose(
+        w_distances_sq, w_distances_sq.T, atol=1e-5
+    ), "The self-distance matrix for Wasserstein is not symmetric"
+
+    assert torch.allclose(
+        get_diag(w_distances_sq), torch.zeros(n_classes), atol=1e-5
+    ), "The diagonal of the self-distance matrix for Wasserstein is not zero"
+
+    # Compare to expected Euclidean distance when all covariances are equal
+    shared_cov = torch.eye(n_dim).repeat(n_classes, 1, 1) * 2.0
+    shared_cov_stats = {
+        "means": means,
+        "covariances": shared_cov,
+    }
+    w_distances_sq = wasserstein_sq(shared_cov_stats, shared_cov_stats)
+    euclidean_sq = torch.cdist(means, means, p=2.0) ** 2
+
+    assert torch.allclose(
+        w_distances_sq, torch.squeeze(euclidean_sq), atol=1e-5
+    ), "Wasserstein squared distance doesn't match expected Euclidean distance"
 

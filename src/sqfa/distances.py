@@ -3,8 +3,10 @@
 import torch
 
 from .linalg import (
+    conjugate_matrix,
     generalized_eigenvalues,
     spd_log,
+    spd_sqrt,
 )
 
 __all__ = [
@@ -17,6 +19,8 @@ __all__ = [
     "bhattacharyya",
     "mahalanobis_sq",
     "mahalanobis",
+    "wasserstein_sq",
+    "wasserstein",
     "hellinger",
     "fisher_rao_same_cov",
 ]
@@ -359,6 +363,106 @@ def mahalanobis(statistics_A, statistics_B):
     """
     distances_squared = mahalanobis_sq(statistics_A, statistics_B)
     return torch.sqrt(distances_squared + EPSILON)
+
+
+def _bures_wasserstein_sq(A, B):
+    """
+    Compute the squared Bures-Wasserstein distance between SPD matrices.
+
+    Parameters
+    ----------
+    A : torch.Tensor
+        Shape (n_batch_A, n_dim, n_dim), the first SPD matrix.
+
+    B : torch.Tensor
+        Shape (n_batch_B, n_dim, n_dim), the second SPD matrix.
+
+    Returns
+    -------
+    distance_squared : torch.Tensor
+        Shape (n_batch_A, n_batch_B), the squared Bures-Wasserstein distance.
+    """
+    A = _unsqueeze_covariance(A)
+    B = _unsqueeze_covariance(B)
+
+    tr_A = torch.einsum("...ii->...", A)
+    tr_B = torch.einsum("...ii->...", B)
+
+    B_sqrt = spd_sqrt(B)
+    C = conjugate_matrix(A, B_sqrt)
+    C_sqrt_eigvals = torch.sqrt(torch.linalg.eigvalsh(C))
+    tr_C = torch.sum(C_sqrt_eigvals, dim=-1).reshape(A.shape[0], B.shape[0])
+
+    distance_squared = tr_A[:, None] + tr_B[None, :] - 2 * tr_C
+    return distance_squared
+
+
+def wasserstein_sq(statistics_A, statistics_B):
+    """
+    Compute the squared Wasserstein distance between Gaussian distributions.
+
+    Parameters
+    ----------
+    statistics_A: dict
+        Dictionary containing the means and covariances of the first
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    statistics_B: dict
+        Dictionary containing the means and covariances of the second
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    Returns
+    -------
+    distance_squared : torch.Tensor
+        Shape (n_classes, n_classes), the squared Wasserstein distance.
+    """
+    mean_A = _unsqueeze_mean(statistics_A["means"])
+    cov_A = _unsqueeze_covariance(statistics_A["covariances"])
+    mean_B = _unsqueeze_mean(statistics_B["means"])
+    cov_B = _unsqueeze_covariance(statistics_B["covariances"])
+
+    dist_means_sq = torch.sum((mean_A[:, None] - mean_B[None, :]) ** 2, dim=-1)
+    dist_covariances_sq = _bures_wasserstein_sq(cov_A, cov_B)
+
+    distance_squared = dist_means_sq + dist_covariances_sq
+    return torch.squeeze(distance_squared)
+
+
+def wasserstein(statistics_A, statistics_B):
+    """
+    Compute the Wasserstein distance between Gaussian distributions.
+    A small epsilon is added inside the square root to avoid gradient
+    instabilities.
+
+    Parameters
+    ----------
+    statistics_A: dict
+        Dictionary containing the means and covariances of the first
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    statistics_B: dict
+        Dictionary containing the means and covariances of the second
+        Gaussian distribution, with keys "means" and "covariances".
+        - The means are a torch.Tensor of shape (n_classes, n_filters)
+        - The covariances are a torch.Tensor of
+          shape (n_classes, n_filters, n_filters).
+
+    Returns
+    -------
+    distance : torch.Tensor
+        Shape (n_classes, n_classes), the Wasserstein distance.
+    """
+    distances_squared = wasserstein_sq(statistics_A, statistics_B)
+    return torch.sqrt(torch.abs(distances_squared) + EPSILON)
 
 
 def hellinger(statistics_A, statistics_B):
