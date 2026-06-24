@@ -17,8 +17,8 @@ The `sqfa` package implements SQFA.
 
 For detailed information on the method and the package, see the
 [sqfa package tutorials](https://sqfa.readthedocs.io/en/latest/tutorials/spd_geometry.html)
-and the SQFA preprint,
-["Supervised Quadratic Feature Analysis: An Information Geometry Approach to Dimensionality Reduction"](https://arxiv.org/abs/2502.00168).
+and the SQFA paper,
+["Supervised Quadratic Feature Analysis: Information Geometry for Dimensionality Reduction"](https://openreview.net/pdf?id=jwNJiLphnZ).
 
 ## Overview
 
@@ -121,17 +121,18 @@ pip install -e ".[dev]"
 
 ## Citation
 
-Please cite the [SQFA preprint](https://arxiv.org/abs/2502.00168) if you use the package:
+Please cite the [SQFA paper](https://openreview.net/pdf?id=jwNJiLphnZ) if you use the package:
 
 ```bibtex
-@misc{herreraesposito2025supervisedquadraticfeatureanalysis,
-      title={Supervised Quadratic Feature Analysis: An Information Geometry Approach to Dimensionality Reduction}, 
-      author={Daniel Herrera-Esposito and Johannes Burge},
-      year={2025},
-      eprint={2502.00168},
-      archivePrefix={arXiv},
-      primaryClass={stat.ML},
-      url={https://arxiv.org/abs/2502.00168}, 
+@article{
+herrera-esposito2026supervised,
+title={Supervised Quadratic Feature Analysis: Information Geometry for Dimensionality Reduction},
+author={Daniel Herrera-Esposito and Johannes Burge},
+journal={Transactions on Machine Learning Research},
+issn={2835-8856},
+year={2026},
+url={https://openreview.net/forum?id=jwNJiLphnZ},
+note={}
 }
 ```
 
